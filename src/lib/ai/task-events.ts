@@ -44,7 +44,10 @@ export function applyTaskEvent(state: TaskState | null, ev: TaskEvent, activeTas
 /** Server-side emitter: numbers events per task so the client can order and de-duplicate them. */
 export function taskEmitter(taskId: string, send: (line: string) => void) {
   let seq = 0;
+  let terminal = false;
   return (stage: TaskStage, message?: string, meta?: TaskEvent["meta"]) => {
+    if (terminal) return;
+    terminal = isTerminalStage(stage);
     const ev: TaskEvent = { taskId, seq: ++seq, stage, message, ts: Date.now(), ...(meta ? { meta } : {}) };
     send(`data: ${JSON.stringify({ vision_task: ev })}\n\n`);
   };

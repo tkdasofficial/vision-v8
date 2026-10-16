@@ -28,6 +28,11 @@ describe("task events", () => {
     expect(needsLiveFacts("What is the latest iPhone price?")).toBe(true);
     expect(needsLiveFacts("Write a poem about rain")).toBe(false);
   });
+  it("never emits progress after a terminal failure", () => {
+    const lines: string[] = []; const emit = taskEmitter("t", (line) => lines.push(line));
+    emit("thinking"); emit("switching_provider"); emit("failed"); emit("reasoning");
+    expect(lines.map((line) => JSON.parse(line.slice(6)).vision_task.stage)).toEqual(["thinking", "switching_provider", "failed"]);
+  });
 });
 
 describe("render scheduler", () => {

@@ -10,7 +10,7 @@ vi.mock("@/lib/tools/registry.server", () => ({
     return { files: [{ name: "hindi.txt", mime: "text/plain", bytes: new TextEncoder().encode("भारत") }] };
   } }]]), catalogText: () => "", verifyOutput: async () => null,
 }));
-vi.mock("@/lib/tools/tool-schema", () => ({ executeTool: async (tool: any, ctx: any, params: any) => { console.log("fixture params", JSON.stringify(params)); return tool.run(ctx, params); } }));
+vi.mock("@/lib/tools/tool-schema", () => ({ executeTool: async (tool: any, ctx: any, params: any) => tool.run(ctx, params) }));
 describe("artifact lifecycle", () => {
   it("reports writing, creation, validation and saving before completion", async () => {
     const events: string[] = [];

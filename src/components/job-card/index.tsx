@@ -47,7 +47,7 @@ function StatusIcon({ status }: { status: JobView["status"] }) {
 export default function JobCard({ job: given, onRetry, compact }: { job: JobView; onRetry?: (id: string) => void; compact?: boolean }) {
   const [job, setJob] = useState(given);
   const [viewing, setViewing] = useState<string | null>(null);
-  useEffect(() => { setJob((cur) => (Date.parse(given.updatedAt) >= Date.parse(cur.updatedAt) ? given : cur)); }, [given]);
+  useEffect(() => { setJob((cur) => (cur.id !== given.id || (!isTerminal(cur.status) || isTerminal(given.status)) && Date.parse(given.updatedAt) >= Date.parse(cur.updatedAt) ? given : cur)); }, [given]);
   // Reload the stored state (e.g. after a page refresh) and keep following it until it finishes.
   useEffect(() => {
     let stop = false;
@@ -55,7 +55,7 @@ export default function JobCard({ job: given, onRetry, compact }: { job: JobView
       for (;;) {
         const j = await fetchJob(given.id).catch(() => null);
         if (stop) return;
-        if (j) setJob((cur) => (Date.parse(j.updatedAt) >= Date.parse(cur.updatedAt) || !cur.result?.webApp ? j : cur));
+        if (j) setJob((cur) => ((!isTerminal(cur.status) || isTerminal(j.status)) && Date.parse(j.updatedAt) >= Date.parse(cur.updatedAt) ? j : cur));
         if (!j || isTerminal(j.status)) return;
         await new Promise((r) => setTimeout(r, 2000));
       }
