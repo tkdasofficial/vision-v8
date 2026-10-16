@@ -30,7 +30,7 @@ describe("multilingual file export", () => {
       expect(xml).toContain(s.text);
       if (id === "ar" || id === "ur") expect(xml).toContain("<w:bidi");
       const e = await buildDocument("epub", s.title, md);
-      expect(Object.values(unzipSync(e.bytes)).map((b) => strFromU8(b)).join("")).toContain(s.text);
+      expect(Object.values(unzipSync(e.bytes)).map((b) => strFromU8(b)).join("").replace(/&apos;|&#39;/g, "'")).toContain(s.text);
       const c = await buildDocument("csv", s.title, md); keep(`${id}.csv`, c.bytes);
       const csv = strFromU8(c.bytes);
       expect(csv).toContain(s.cell);
