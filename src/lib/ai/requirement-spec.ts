@@ -41,7 +41,7 @@ export function buildSpec(text: string, history: ConvMsg[] = []): RequirementSpe
   const a = analyzeRequest(t);
 
   // Quantity: first explicit count, then the latest correction ("actually make it 7") wins.
-  const counts = [...t.matchAll(COUNT_RE)].filter((m) => Number.isFinite(num(m[1])) && num(m[1]) >= 1);
+  const counts = [...t.matchAll(COUNT_RE)].filter((m) => Number.isFinite(num(m[1])) && num(m[1]) >= 1 && !(num(m[1]) === 1 && /^(?:sentence|line)$/.test(sing(m[2])) && /\bin\s*$/i.test(t.slice(Math.max(0, (m.index ?? 0) - 4), m.index))));
   let count = counts[0] ? { n: num(counts[0][1]), noun: sing(counts[0][2]), ev: counts[0][0] } : null;
   const corr = [...t.matchAll(/\b(?:actually|instead|no,?|wait,?|sorry,?)\s+(?:make\s+it|give\s+me|do|use)?\s*(\d{1,4})\b|\bmake\s+it\s+(\d{1,4})\s+instead\b/gi)].pop();
   if (corr && count) count = { ...count, n: Number(corr[1] ?? corr[2]), ev: corr[0] };
@@ -52,7 +52,7 @@ export function buildSpec(text: string, history: ConvMsg[] = []): RequirementSpe
   // Length limits (words / characters) with per-item vs total scope, and impossible ranges.
   const wr = /(?:between\s+)?(\d{1,5})\s*(?:-|–|to|and)\s*(\d{1,5})\s*words?\b/i.exec(t);
   const wmax = /\b(?:under|at most|no more than|max(?:imum)?(?: of)?|up to|within|less than|fewer than)\s*(\d{1,5})\s*words?\b/i.exec(t);
-  const wmin = /\b(?:at least|minimum(?: of)?|no fewer than|more than|over)\s*(\d{1,5})\s*words?\b/i.exec(t);
+  const wmin = /(?<!\bno\s)\b(?:at least|minimum(?: of)?|no fewer than|more than|over)\s*(\d{1,5})\s*words?\b/i.exec(t);
   const scope = (m: RegExpExecArray) => (/\b(each|per|every)\b/i.test(clauseOf(t, m.index) + t.slice(m.index + m[0].length, m.index + m[0].length + 12)) ? "item" : "total");
   let wordsMax: number | null = null;
   if (wr && !/\bseconds?\b/i.test(wr[0])) add("words", `${wr[1]}-${wr[2]}:${scope(wr)}`, wr[0]);
@@ -135,7 +135,7 @@ export function buildSpec(text: string, history: ConvMsg[] = []): RequirementSpe
   if (ref.kind === "found") { const o = /\b(first|second|third|fourth|fifth)\b/i.exec(ref.label); add("ref", o ? o[1].toLowerCase() : "previous", ref.label); }
   else if (ref.kind === "ambiguous") add("ambiguous", "reference", ref.label);
   else if (ref.kind === "missing") add("ambiguous", "reference", ref.label);
-  const sameAs = /\b(previous|same)\s+(format|style|structure|layout)\b|\bdo\s+the\s+same\b|\b(?:make|do|fix|improve|redo|change)\s+it\b/i.exec(t);
+  const sameAs = /\b(previous|same)\s+(format|style|structure|layout)\b|\bdo\s+the\s+same\b|\b(?:make|do|fix|improve|redo|change)\s+it\b(?!\s+(?:\d|one|two|three|four|five|six|seven|eight|nine|ten)\b)/i.exec(t);
   if (sameAs && !reqs.some((r) => r.kind === "ref")) hasAnswer ? add("ref", "previous", sameAs[0]) : add("ambiguous", "reference", sameAs[0]);
   if (/^(?:please\s+)?(?:write|tell me|say)\s+(?:something|anything|stuff)\s+(?:about\s+)?(?:it|this|that)?\.?$/i.test(t)) add("ambiguous", "topic", t);
   if (/^(?:please\s+)?(?:translate|summari[sz]e|rewrite|proofread|shorten)\s+(?:this|that|it)\.?$/i.test(t) && !hasAnswer) add("ambiguous", "missing-input", t);
