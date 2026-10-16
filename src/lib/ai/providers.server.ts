@@ -8,13 +8,13 @@ import type { ProviderEvent } from "./orchestrator.server";
 
 export function endpoint(t: ModelRef): { url: string; key?: string } {
   // Off the Cloudflare Worker (no bindings), every AI call goes through the Cloudflare
-  // "vision" Worker's /ai relay, which holds the provider keys. MAIL_TOKEN authorizes it.
+  // "vision" Worker's /ai relay, which holds the provider keys. There is no direct fallback:
+  // without AI_RELAY_TOKEN the call fails as "not configured".
   if (!getAiBinding() && !getD1Binding()) {
-    const token = getSecret("MAIL_TOKEN");
-    if (token) {
-      const gw = (getSecret("AUTH_GATEWAY_URL") || AUTH_GATEWAY_URL).replace(/\/+$/, "");
-      return { url: `${gw}/ai/${t.provider}`, key: token };
-    }
+    const gw = (getSecret("AUTH_GATEWAY_URL") || AUTH_GATEWAY_URL).replace(/\/+$/, "");
+    const key = getSecret("AI_RELAY_TOKEN");
+    if (!key) console.error(JSON.stringify({ tag: "[ai:relay]", error: "AI_RELAY_TOKEN is not set; AI calls cannot reach the Cloudflare Worker" }));
+    return { url: `${gw}/ai/${t.provider}`, key };
   }
   if (t.provider === "groq") return { url: "https://api.groq.com/openai/v1/chat/completions", key: getSecret("GROQ_API_KEY") };
   if (t.provider === "nvidia") return { url: "https://integrate.api.nvidia.com/v1/chat/completions", key: getSecret("NVIDIA_API_KEY") };

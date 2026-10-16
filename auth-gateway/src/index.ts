@@ -244,7 +244,7 @@ export default {
   async fetch(req: Request, env: Env & MailEnv & RuntimeEnv & AiEnv): Promise<Response> {
     const url = new URL(req.url);
     if (url.pathname === "/mail") return handleMail(req, env);
-    const ai = url.pathname.match(/^\/ai\/(nvidia|groq|cf)$/);
+    const ai = url.pathname.match(/^\/ai\/(nvidia|groq|cf|run)$/);
     if (ai) return handleAi(req, env, ai[1]);
     if (url.pathname.startsWith("/runtime/")) return handleRuntime(req, env, url.pathname);
     if (req.method !== "GET" && req.method !== "HEAD") return text(405, "Method not allowed");
