@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { captureWorkerEnv } from "@/lib/ai/runtime-env.server";
 import { withRetry, classifyFailure } from "@/lib/ai/failures";
 import { resolveScope, includesPersonal, projectContextBlock } from "@/lib/ai/memory";
 import { promptAddendum, parsePrefs } from "@/lib/settings";
@@ -39,7 +40,7 @@ describe("withRetry", () => {
 });
 
 describe("streamFromProvider uses the shared retry", () => {
-  beforeEach(() => { vi.restoreAllMocks(); process.env.GROQ_API_KEY = "k"; });
+  beforeEach(() => { vi.restoreAllMocks(); process.env.GROQ_API_KEY = "k"; captureWorkerEnv({ DB: { prepare() {} } }); });
   const model = { provider: "groq", model: "m", label: "M" } as any;
   it("retries a 503 then streams, and does not retry a 401", async () => {
     vi.spyOn(globalThis, "setTimeout").mockImplementation(((f: any) => { f(); return 0 as any; }) as any);

@@ -16,7 +16,7 @@ describe("provider priority", () => {
     vi.spyOn(globalThis, "setTimeout").mockImplementation(((f: any, ms: number) => timer(f, ms < 4000 ? 0 : ms)) as any);
     limiter.reset();
     delete process.env.NVIDIA_API_KEY; delete process.env.GROQ_API_KEY;
-    captureWorkerEnv({ NVIDIA_API_KEY: "n", GROQ_API_KEY: "g" });
+    captureWorkerEnv({ NVIDIA_API_KEY: "n", GROQ_API_KEY: "g", DB: { prepare() {} } });
     process.env.CLOUDFLARE_ACCOUNT_ID = "a"; process.env.CLOUDFLARE_API_TOKEN = "c";
   });
 
