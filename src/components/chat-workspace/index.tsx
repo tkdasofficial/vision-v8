@@ -654,7 +654,7 @@ const ChatWorkspace = ({ tool, onMenuClick, initialMessages, chatId: externalCha
                 isNew={newMessageIds.has(msg.id)}
               />
             ))}
-            {isTyping && <TypingIndicator phase={thinkingPhase} label={taskState ? STAGE_LABELS[taskState.stage] : undefined} detail={taskState?.message} />}
+            {isTyping && !messages.some((m) => m.job && !isTerminal(m.job.status)) && <TypingIndicator phase={thinkingPhase} label={taskState ? STAGE_LABELS[taskState.stage] : undefined} detail={taskState?.message} />}
           </div>
         ) : (
           <EmptyState tool={tool} />
