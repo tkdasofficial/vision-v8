@@ -57,17 +57,17 @@ export function chineseVariant(t: string): "zh-CN" | "zh-TW" | null {
 
 // ---------- request-language detection (what the user wrote in; never the requested output language) ----------
 const LATIN_HINTS: [string, RegExp, RegExp?][] = [
-  ["es", /\b(escribe|dame|haz|una|unos|del|los|las|cómo|qué|por favor|para|consejos|sobre|con|sin|en|el|este|esta|responde|cada|debe|lista|tabla)\b/gi, /[ñ¿¡]/],
-  ["pt", /\b(escreva|me dê|dê|faça|uma|você|não|com|sem|para|em|o|os|as|do|da|dicas|sobre|responda|retorne|apenas|cada|deve|resuma|liste|lista|tabela)\b/gi, /[ãõ]|ção\b/],
-  ["fr", /\b(écris|donne|fais|une|des|avec|sans|pour|le|la|les|du|vous|est|en|réponds|liste|renvoie|uniquement|chaque|doit|résume)\b/gi, /[èêœ]|\b(?:qu'|l'|d')/],
-  ["de", /\b(schreibe|schreib|gib|mir|eine|einen|und|mit|ohne|für|der|die|das|den|ist|bitte|nenne|erstelle|zurück|jeder|soll|über|auf)\b/gi, /[ßäöü]/],
-  ["id", /\b(tulis|berikan|buat|dan|yang|untuk|dengan|tanpa|dalam|tentang|ini|itu|kata|saya|kepada|setiap|harus|hanya|kembalikan|ringkas|tolong|jawab|daftar)\b/gi],
+  ["es", /(?<![\p{L}])(escribe|dame|haz|un|una|unos|del|al|y|menos|mi|los|las|cómo|qué|por favor|para|consejos|sobre|con|sin|en|el|este|esta|responde|cada|debe|lista|tabla)(?![\p{L}])/giu, /[ñ¿¡]/],
+  ["pt", /(?<![\p{L}])(escreva|me dê|dê|faça|uma|você|não|com|sem|para|em|dicas|sobre|responda|retorne|apenas|cada|deve|resuma|liste|lista|tabela|exemplos|de verbos|por favor)(?![\p{L}])/giu, /[ãõ]|ção\b/],
+  ["fr", /(?<![\p{L}])(propose|au|aux|et|je|moi|écris|donne|fais|une|des|avec|sans|pour|le|la|les|du|vous|est|en|réponds|liste|renvoie|uniquement|chaque|doit|résume)(?![\p{L}])/giu, /[èêœ]|\b(?:qu'|l'|d')/],
+  ["de", /(?<![\p{L}])(schreibe|schreib|gib|mir|eine|einen|und|mit|ohne|für|der|das|den|ist|bitte|nenne|erstelle|zurück|jeder|soll|über|auf)(?![\p{L}])/giu, /[ßäöü]/],
+  ["id", /(?<![\p{L}])(tulis|berikan|buat|dan|yang|untuk|dengan|tanpa|dalam|tentang|ini|itu|kata|saya|kepada|setiap|harus|hanya|kembalikan|ringkas|tolong|jawab|daftar)(?![\p{L}])/giu],
 ];
 export function detectLocale(text: string): string | null {
   const t = normalizeText(text);
   const letters = (t.match(/\p{L}/gu) ?? []).length || 1;
   const share = (re: RegExp) => (t.match(re) ?? []).length / letters;
-  if (/[\u0900-\u097f]/.test(t)) return "hi";
+  if (/[\u0904-\u0939\u093d-\u094d\u0950-\u0963]/.test(t)) return "hi"; // letters only: the danda "।" is shared with Bengali
   if (share(/[\u0980-\u09ff]/g) > 0.2) return "bn";
   if (share(/[\u0b80-\u0bff]/g) > 0.2) return "ta";
   if (share(/[\u3040-\u30ff]/g) > 0.05) return "ja";

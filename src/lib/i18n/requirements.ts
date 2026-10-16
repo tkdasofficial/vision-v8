@@ -79,7 +79,7 @@ export function multilingualRequirements(raw: string, add: Add, has: (kind: stri
     const ev = raw.normalize("NFC").slice(Math.max(0, i - 12), i + m[0].length + 12).trim() || m[0];
     let lo: string = "", hi: string = "";
     if (m[2]) { lo = m[1]; hi = m[2]; if (Number(lo) > Number(hi)) [lo, hi] = [hi, lo]; }
-    else if (MIN_RE.test(ctx) && !MAX_RE.test(before.slice(-14))) lo = m[1];
+    else if (MIN_RE.test(ctx)) lo = m[1]; // checked first: "не менее" (min) contains "менее" (max)
     else if (MAX_RE.test(ctx)) hi = m[1];
     else continue;
     if (isWord && !has("words")) add("words", `${lo}-${hi}:${scope}`, ev);

@@ -5,17 +5,21 @@
 import { analyzeRequest } from "./deep/analyze";
 import { parseRequiredNames } from "./deep/instructions";
 import { resolveReference, type ConvMsg } from "./references";
+import { detectLocale, explicitLanguages, localeById, localeByKey, normalizeText } from "@/lib/i18n/locales";
+import { multilingualRequirements } from "@/lib/i18n/requirements";
 
 export type ReqSource = "explicit" | "inferred";
 export type Req = { kind: string; value: string; source: ReqSource; mandatory: boolean; evidence: string };
-export type RequirementSpec = { normalized: string; reqs: Req[]; gaps: string[] };
+export type RequirementSpec = { normalized: string; reqs: Req[]; gaps: string[]; /** Locale the request is written in (detection only; never the requested output language). */ requestLocale?: string | null };
 
 // ---------- normalization: typos + Hinglish (applied to a copy used only for matching) ----------
 const TYPOS: Record<string, string> = { writ: "write", giv: "give", plz: "please", pls: "please", abt: "about", secnes: "scenes", scnes: "scenes", flim: "film", wrods: "words", wrds: "words", bulet: "bullet", bulets: "bullets", tabel: "table", tabl: "table", promts: "prompts", pargraph: "paragraph", paragrph: "paragraph", qustions: "questions", summery: "summary", emial: "email" };
-const LANGS = "hindi|english|german|french|spanish|italian|bengali|bangla|marathi|tamil|telugu|urdu|arabic|russian|chinese|japanese|portuguese|hinglish";
+const LANGS = "simplified chinese|traditional chinese|chinese \\(simplified\\)|chinese \\(traditional\\)|korean|indonesian|hindi|english|german|french|spanish|italian|bengali|bangla|marathi|tamil|telugu|urdu|arabic|russian|chinese|japanese|portuguese|hinglish";
 export function normalize(text: string): string {
-  let t = " " + text.slice(0, 20000).replace(/[‘’]/g, "'").replace(/[“”]/g, '"') + " ";
+  const latinOther = detectLocale(text) != null;
+  let t = " " + normalizeText(text.slice(0, 20000)).replace(/[‘’]/g, "'").replace(/[“”]/g, '"') + " ";
   t = t.replace(/\b[A-Za-z]+\b/g, (w) => TYPOS[w.toLowerCase()] ?? w);
+  if (latinOther) return t.trim(); // Hinglish shorthands ("das", "ek"…) would corrupt German/Spanish/… text.
   t = t.replace(/\bbina\s+([\p{L}]+(?:\s+[\p{L}]+)?)\s+ke\b/giu, "without $1,");
   t = t.replace(/\b([\p{L}]+)\s+ke\s+saath\b/giu, "include $1");
   t = t.replace(new RegExp(`\\b(${LANGS})\\s+(?:mein|me|main)\\b`, "gi"), "in $1");
@@ -96,11 +100,15 @@ export function buildSpec(text: string, history: ConvMsg[] = []): RequirementSpe
   for (const m of t.matchAll(new RegExp(`\\b(${LANGS})\\s*(?:\\([^)]{1,20}\\)\\s*)?(${PART})\\b`, "gi"))) add("script", `${partOf(m[2])}:${m[1].toLowerCase()}`, m[0]);
   for (const m of t.matchAll(new RegExp(`\\bin\\s+(${LANGS})\\b(?!\\s*(?:\\([^)]*\\)\\s*)?(?:${PART}))`, "gi"))) {
     if (new RegExp(`(?:${PART})\\s+(?:must be |should be |written )?$`, "i").test(t.slice(Math.max(0, m.index - 30), m.index))) continue;
-    add("lang", m[1].toLowerCase(), m[0]);
+    add("lang", langKey(m[1]), m[0]);
+  }
+  const reqLocale = detectLocale(text);
+  if (reqLocale && reqLocale !== "en") {
+    for (const l of explicitLanguages(text)) if (!reqs.some((r) => r.kind === "script")) add("lang", l.key, l.evidence);
+    multilingualRequirements(text, add, (k) => reqs.some((r) => r.kind === k || `${r.kind}:${r.value}` === k));
   }
   if (!reqs.some((r) => r.kind === "lang" || r.kind === "script")) {
-    const hits = (re: RegExp) => (low.match(re) ?? []).length;
-    const inferred = /\p{Script=Devanagari}/u.test(t) ? "hindi" : hits(/\b(escribe|para|una|unos|del|cómo|qué|por favor)\b/g) >= 2 ? "spanish" : hits(/\b(écris|pour|une|avec|s'il|vous|des)\b/g) >= 2 ? "french" : hits(/\b(schreibe|für|eine|und|bitte|mit)\b/g) >= 2 ? "german" : null;
+    const inferred = reqLocale ? localeById(reqLocale)?.key ?? null : null;
     if (inferred) add("lang", inferred, "language the request is written in", { source: "inferred" });
   }
 
@@ -141,10 +149,12 @@ export function buildSpec(text: string, history: ConvMsg[] = []): RequirementSpe
   if (/^(?:please\s+)?(?:write|tell me|say)\s+(?:something|anything|stuff)\s+(?:about\s+)?(?:it|this|that)?\.?$/i.test(t)) add("ambiguous", "topic", t);
   if (/^(?:please\s+)?(?:translate|summari[sz]e|rewrite|proofread|shorten)\s+(?:this|that|it)\.?$/i.test(t) && !hasAnswer) add("ambiguous", "missing-input", t);
 
-  return { normalized: t, reqs, gaps: coverageGaps(t, reqs) };
+  return { normalized: t, reqs, gaps: coverageGaps(t, reqs), requestLocale: reqLocale };
 }
 
 /** Deterministic coverage check: clauses that look like instructions but produced no requirement. */
+const langKey = (s: string) => { const l = s.toLowerCase(); return /simplified/.test(l) ? "chinese-simplified" : /traditional/.test(l) ? "chinese-traditional" : l; };
+
 export function coverageGaps(t: string, reqs: Req[]): string[] {
   const ev = reqs.map((r) => r.evidence.toLowerCase()).join(" | ");
   const gaps: string[] = [];
@@ -168,12 +178,23 @@ export function specPrompt(spec: RequirementSpec): string {
   const explicit = spec.reqs.filter((r) => r.source === "explicit" && !["conflict", "ambiguous"].includes(r.kind));
   const inferred = spec.reqs.filter((r) => r.source === "inferred");
   const conflicts = spec.reqs.filter((r) => r.kind === "conflict"), amb = spec.reqs.filter((r) => r.kind === "ambiguous");
-  if (!explicit.length && !inferred.length && !conflicts.length && !amb.length && !spec.gaps.length) return "";
+  if (!explicit.length && !inferred.length && !conflicts.length && !amb.length && !spec.gaps.length) return languageLine(spec);
   let out = "\n\nUnderstood requirements (from the user's own words; do not drop, invent or change any):";
   if (explicit.length) out += `\n${explicit.map(show).join("\n")}`;
   if (inferred.length) out += `\nInferred (not stated — a sensible default the user may override):\n${inferred.map(show).join("\n")}`;
   if (spec.gaps.length) out += `\nAlso follow these instructions exactly as written:\n${spec.gaps.map((g) => `- "${g}"`).join("\n")}`;
   if (conflicts.length) out += `\nConflicting instructions (${conflicts.map((c) => c.value).join(", ")}): follow the most specific/explicit numeric rule and state the conflict in one short line.`;
   if (amb.some((a) => a.value !== "reference" || !spec.reqs.some((r) => r.kind === "ref"))) out += `\nThe request is missing something essential (${amb.map((a) => a.value).join(", ")}). Ask exactly one short clarifying question instead of guessing.`;
-  return out;
+  return out + languageLine(spec);
+}
+
+/** Response-language rule: an explicit request wins; otherwise reply in the request's language. Never overrides system/security rules. */
+export function languageLine(spec: RequirementSpec): string {
+  const name = (k: string) => localeByKey(k)?.name ?? k[0].toUpperCase() + k.slice(1);
+  const langs = spec.reqs.filter((r) => r.kind === "lang" && r.source === "explicit").map((r) => name(r.value));
+  const req = spec.requestLocale && spec.requestLocale !== "en" ? localeById(spec.requestLocale) : null;
+  if (!langs.length && !req) return "";
+  const keep = "Keep code, identifiers, file names, URLs, names and quoted or must-keep text exactly as written; never translate them unless asked.";
+  if (langs.length) return `\n\nResponse language: ${langs.join(" and ")} (explicitly requested${req ? `; the request itself is in ${req.name}` : ""}). Use each requested language only for the parts it was asked for. ${keep}`;
+  return `\n\nResponse language: reply in ${req!.name} (${req!.nativeName}), the language the user wrote in. ${keep}`;
 }

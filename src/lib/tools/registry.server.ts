@@ -5,6 +5,8 @@ import * as P from "./pure";
 import { writeXlsx, readXlsx, docxText, writeEpub, toXhtml } from "./office";
 import { readArchiveSafely } from "@/lib/builder/archive";
 import { findSecretKinds } from "../../../security/archive/zip-guard";
+import type { Style } from "@/lib/i18n/pdf-text.server";
+import { detectLocale, localeById } from "@/lib/i18n/locales";
 
 export type WorkFile = { name: string; mime: string; bytes: Uint8Array };
 export type ToolOut = { table?: unknown[][]; text?: string; data?: unknown; files?: WorkFile[]; preview?: { kind: "svg" | "markdown"; content: string } };
@@ -32,7 +34,8 @@ function pick(c: ToolCtx, p: any, want?: string[]): WorkFile {
   return f;
 }
 const many = (c: ToolCtx, want: string[]) => c.files.filter((f) => want.includes(kindOf(f)));
-const txt = (name: string, content: string, mime = "text/plain"): WorkFile => ({ name, mime, bytes: strToU8(content) });
+// CSV with non-ASCII text gets a UTF-8 BOM so Excel opens it as UTF-8 instead of the system code page.
+const txt = (name: string, content: string, mime = "text/plain"): WorkFile => ({ name, mime, bytes: strToU8(mime === "text/csv" && /[^\x00-\x7f]/.test(content) && !content.startsWith("\uFEFF") ? "\uFEFF" + content : content) });
 
 /** Plain text of any supported file. */
 export async function textOf(f: WorkFile, ctx?: ToolCtx): Promise<string> {
@@ -80,61 +83,77 @@ const clean = (t: string) => t.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
 
 // ---------- Document builders ----------
 const WIN = /[^\x09\x0a\x0d\x20-\x7e\xa0-\xff€‘’“”•–—…]/g;
-export async function markdownToPdf(title: string, md: string): Promise<Uint8Array> {
+const PDF_LOST = new WeakMap<Uint8Array, number>();
+export async function markdownToPdf(title: string, md: string, fetcher?: typeof fetch): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   doc.setTitle(title); doc.setProducer("VISION"); doc.setCreator("VISION");
-  const font = await doc.embedFont(StandardFonts.Helvetica), bold = await doc.embedFont(StandardFonts.HelveticaBold), mono = await doc.embedFont(StandardFonts.Courier);
+  const { createTextKit } = await import("@/lib/i18n/pdf-text.server");
+  const kit = await createTextKit(doc, `${title}\n${md}`, fetcher);
   const W = 595, H = 842, M = 56;
   let page = doc.addPage([W, H]), y = H - M;
-  const line = (t: string, f = font, size = 11, indent = 0, gap = 1.45) => {
-    const words = t.replace(WIN, "?").split(/(\s+)/); let cur = "";
-    const flush = () => { if (y < M + size) { page = doc.addPage([W, H]); y = H - M; } page.drawText(cur, { x: M + indent, y: y - size, size, font: f, color: rgb(0.1, 0.1, 0.12) }); y -= size * gap; cur = ""; };
-    for (const w of words) { const next = cur + w; if (f.widthOfTextAtSize(next, size) > W - 2 * M - indent && cur.trim()) { flush(); cur = w.trimStart(); } else cur = next; }
+  // CJK has no spaces between words: each Han/Kana/Hangul character is its own break opportunity.
+  const tokens = (t: string) => t.split(/(\s+)/).flatMap((w) => (/[\u3000-\u30ff\u3400-\u9fff\uff00-\uffef]/.test(w) ? w.split(/(?=[\u3000-\u30ff\u3400-\u9fff\uff00-\uffef])/u) : [w]));
+  const line = (t: string, f: Style = "regular", size = 11, indent = 0, gap = 1.45) => {
+    let cur = "";
+    const flush = () => { if (y < M + size) { page = doc.addPage([W, H]); y = H - M; } kit.draw(page, cur, M + indent, y - size, size, f, W - 2 * M - indent); y -= size * gap; cur = ""; };
+    for (const w of tokens(t)) { const next = cur + w; if (kit.width(next, f, size) > W - 2 * M - indent && cur.trim()) { flush(); cur = w.trimStart(); } else cur = next; }
     if (cur.trim() || !t) flush();
   };
   let inCode = false;
   for (const raw of md.split(/\r?\n/)) {
     if (raw.startsWith("```")) { inCode = !inCode; continue; }
-    if (inCode) { line(raw || " ", mono, 9, 8, 1.3); continue; }
+    if (inCode) { line(raw || " ", "mono", 9, 8, 1.3); continue; }
     const h = raw.match(/^(#{1,3})\s+(.*)/);
     const plain = (s: string) => s.replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1").replace(/`([^`]+)`/g, "$1").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
-    if (h) { y -= 6; line(plain(h[2]), bold, [20, 15, 13][h[1].length - 1]); y -= 2; }
-    else if (/^\s*[-*]\s+/.test(raw)) line("• " + plain(raw.replace(/^\s*[-*]\s+/, "")), font, 11, 12);
-    else if (/^\s*\|/.test(raw)) { if (!/^\s*\|[\s:|-]+\|\s*$/.test(raw)) line(raw.split("|").filter((c, i, a) => i && i < a.length - 1).map((c) => plain(c.trim())).join("   |   "), font, 10); }
+    if (h) { y -= 6; line(plain(h[2]), "bold", [20, 15, 13][h[1].length - 1]); y -= 2; }
+    else if (/^\s*[-*]\s+/.test(raw)) { const b = plain(raw.replace(/^\s*[-*]\s+/, "")); line(kit.isRtl(b) ? b + " •" : "• " + b, "regular", 11, 12); }
+    else if (/^\s*\|/.test(raw)) { if (!/^\s*\|[\s:|-]+\|\s*$/.test(raw)) line(raw.split("|").filter((c, i, a) => i && i < a.length - 1).map((c) => plain(c.trim())).join("   |   "), "regular", 10); }
     else if (!raw.trim()) y -= 6;
     else line(plain(raw));
   }
-  return doc.save();
+  const bytes = await doc.save();
+  PDF_LOST.set(bytes, kit.lost());
+  return bytes;
 }
 export async function markdownToDocx(title: string, md: string): Promise<Uint8Array> {
   const { Document, Packer, Paragraph, HeadingLevel, TextRun } = await import("docx");
-  const runs = (s: string) => s.split(/(\*\*[^*]+\*\*)/).filter(Boolean).map((part) => part.startsWith("**") ? new TextRun({ text: part.slice(2, -2), bold: true }) : new TextRun(part.replace(/`([^`]+)`/g, "$1").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")));
+  // Script-aware fonts: ascii/hAnsi for Latin, eastAsia for CJK, cs (complex script) for Arabic/Indic; RTL paragraphs get bidi.
+  const loc = localeById(detectLocale(md) ?? "en") ?? localeById("en")!;
+  const cjk = ["zh-CN", "zh-TW", "ja", "ko"].includes(loc.id) ? loc.fonts[0] : "Noto Sans SC";
+  const complex = ["ar", "ur", "hi", "bn", "ta"].includes(loc.id) ? loc.fonts[0] : "Noto Naskh Arabic";
+  const font = { ascii: "Arial", hAnsi: "Arial", eastAsia: cjk, cs: complex };
+  const rtlOf = (s: string) => /^[^A-Za-z\u0900-\u0dff\u3040-\u9fff\uac00-\ud7af]*[\u0590-\u08ff\ufb1d-\ufdff\ufe70-\ufefc]/.test(s);
+  const runs = (s: string) => { const rtl = rtlOf(s); return s.split(/(\*\*[^*]+\*\*)/).filter(Boolean).map((part) => part.startsWith("**") ? new TextRun({ text: part.slice(2, -2), bold: true, font, rightToLeft: rtl }) : new TextRun({ text: part.replace(/`([^`]+)`/g, "$1").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1"), font, rightToLeft: rtl })); };
+  const para = (o: any, text: string) => new Paragraph({ ...o, ...(rtlOf(text) ? { bidirectional: true } : {}) });
   const children: any[] = [];
   let code = false;
   for (const raw of md.split(/\r?\n/)) {
     if (raw.startsWith("```")) { code = !code; continue; }
     if (code) { children.push(new Paragraph({ children: [new TextRun({ text: raw, font: "Courier New", size: 18 })] })); continue; }
     const h = raw.match(/^(#{1,3})\s+(.*)/);
-    if (h) children.push(new Paragraph({ heading: [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3][h[1].length - 1], children: runs(h[2]) }));
-    else if (/^\s*[-*]\s+/.test(raw)) children.push(new Paragraph({ bullet: { level: 0 }, children: runs(raw.replace(/^\s*[-*]\s+/, "")) }));
+    if (h) children.push(para({ heading: [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3][h[1].length - 1], children: runs(h[2]) }, h[2]));
+    else if (/^\s*[-*]\s+/.test(raw)) children.push(para({ bullet: { level: 0 }, children: runs(raw.replace(/^\s*[-*]\s+/, "")) }, raw.replace(/^\s*[-*]\s+/, "")));
     else if (/^\s*\|[\s:|-]+\|\s*$/.test(raw)) continue;
-    else children.push(new Paragraph({ children: runs(raw.replace(/^\s*\|/, "").replace(/\|\s*$/, "").replace(/\s*\|\s*/g, "    ")) }));
+    else children.push(para({ children: runs(raw.replace(/^\s*\|/, "").replace(/\|\s*$/, "").replace(/\s*\|\s*/g, "    ")) }, raw));
   }
-  const doc = new Document({ title, creator: "VISION", styles: { default: { document: { run: { font: "Arial", size: 22 } } } }, sections: [{ children }] });
+  const doc = new Document({ title, creator: "VISION", styles: { default: { document: { run: { font, size: 22 } } } }, sections: [{ children }] });
   return new Uint8Array(await Packer.toArrayBuffer(doc));
 }
 async function mdToHtml(title: string, md: string) {
   const { marked } = await import("marked");
   const body = await marked.parse(md, { async: true });
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title.replace(/</g, "&lt;")}</title><style>body{font-family:Arial,sans-serif;max-width:760px;margin:40px auto;padding:0 16px;line-height:1.6;color:#1e293b}pre{background:#f1f5f9;padding:12px;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #cbd5e1;padding:6px 10px}</style></head><body>${body}</body></html>`;
+  const loc = localeById(detectLocale(md) ?? "en") ?? localeById("en")!;
+  const stack = [...new Set([...loc.fonts, "Noto Sans", "Noto Sans SC", "Noto Sans JP", "Noto Sans KR", "Noto Naskh Arabic", "Noto Sans Devanagari", "Noto Sans Bengali", "Noto Sans Tamil", "Arial", "sans-serif"])].map((f) => (f.includes(" ") ? `'${f}'` : f)).join(",");
+  // dir="auto" on blocks lets mixed RTL/LTR paragraphs each take their own direction.
+  return `<!doctype html><html lang="${loc.id}" dir="${loc.dir}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title.replace(/</g, "&lt;")}</title><style>body{font-family:${stack};max-width:760px;margin:40px auto;padding:0 16px;line-height:1.6;color:#1e293b}pre{background:#f1f5f9;padding:12px;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #cbd5e1;padding:6px 10px;text-align:start}pre,code{direction:ltr;unicode-bidi:isolate}</style></head><body>${body.replace(/<(p|h[1-6]|li|td|th)>/g, '<$1 dir="auto">')}</body></html>`;
 }
 const mdTables = (md: string): unknown[][] => {
   const rows = md.split(/\r?\n/).filter((l) => /^\s*\|/.test(l) && !/^\s*\|[\s:|-]+\|\s*$/.test(l)).map((l) => l.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim()));
   return rows.map((r) => r.map((c) => (/^-?\d+(\.\d+)?$/.test(c) ? Number(c) : c)));
 };
 /** Characters the built-in PDF fonts cannot draw (they are written as "?"). */
-export function pdfLostChars(md: string): number { return md.match(WIN)?.length ?? 0; }
-const pdfNote = (fmt: string, md: string) => { const n = fmt === "pdf" ? pdfLostChars(md) : 0; return n ? ` ⚠️ ${n} character(s) (for example Hindi or other non-Latin script, or emoji) can't be drawn by the PDF font and appear as "?". Choose DOCX, HTML or TXT to keep them.` : ""; };
+export function pdfLostChars(pdf: Uint8Array): number { return PDF_LOST.get(pdf) ?? 0; }
+const pdfNote = (fmt: string, file: WorkFile) => { const n = fmt === "pdf" ? pdfLostChars(file.bytes) : 0; return n ? ` ⚠️ ${n} character(s) (for example emoji, or a script whose font couldn't be loaded) can't be drawn in the PDF and appear as "?". Choose DOCX, HTML or TXT to keep them.` : ""; };
 export async function buildDocument(format: string, title: string, md: string): Promise<WorkFile> {
   const n = P.slugify(title).slice(0, 60) || "document";
   switch (format) {
@@ -214,7 +233,8 @@ export const TOOLS: Tool[] = [
     const fmt = String(p?.format || "md").toLowerCase();
     if (p?.verbatim && c.lastText && !/xlsx|csv|excel/.test(fmt)) {
       const title = p?.title || c.lastText.match(/^#\s+(.*)/m)?.[1] || "Document";
-      return { text: `Saved the previous result as ${fmt.toUpperCase()}.${pdfNote(fmt, c.lastText)}`, files: [await buildDocument(fmt, title, c.lastText)] };
+      const file = await buildDocument(fmt, title, c.lastText);
+      return { text: `Saved the previous result as ${fmt.toUpperCase()}.${pdfNote(fmt, file)}`, files: [file] };
     }
     if (/xlsx|csv|excel/.test(fmt) && (c.lastTable || c.files.some((f) => /\.(csv|tsv|json)$/i.test(f.name) || kindOf(f) === "xlsx"))) {
       // Real data is available: write it as-is instead of letting the AI retype (and possibly invent) numbers.
@@ -227,7 +247,8 @@ export const TOOLS: Tool[] = [
     const md = clean(await c.complete(`You write complete, polished documents in Markdown. Use # headings, lists and Markdown tables where useful.${/xlsx|csv|excel/.test(fmt) ? " The document MUST be a single Markdown table with a header row containing all data." : ""} Output only the document.`, `${p?.request || "Write the document."}${src}`, 6000));
     if (!md) throw new Error("The writer returned nothing.");
     const title = p?.title || md.match(/^#\s+(.*)/m)?.[1] || "Document";
-    return { text: md.slice(0, 20000) + pdfNote(fmt, md), files: [await buildDocument(fmt, title, md)], preview: { kind: "markdown", content: md.slice(0, 20000) } };
+    const file = await buildDocument(fmt, title, md);
+    return { text: md.slice(0, 20000) + pdfNote(fmt, file), files: [file], preview: { kind: "markdown", content: md.slice(0, 20000) } };
   } },
   { id: "convert_document", category: "File conversion", desc: "Convert a document between formats keeping its text: PDF/Word/HTML/Markdown/text/Excel/CSV → pdf, docx, html, md, txt, epub; images → pdf", params: '{"to": "pdf"|"docx"|"html"|"md"|"txt"|"epub"|"xlsx"|"csv", "file"?: string}', run: async (c, p) => {
     const to = String(p?.to || "").toLowerCase().replace("word", "docx");
@@ -254,7 +275,7 @@ export const TOOLS: Tool[] = [
     const out = await buildDocument(to, base(f.name), md);
     out.name = `${base(f.name)}.${out.name.split(".").pop()}`;
     const warn = kindOf(f) === "pdf" ? " Layout, images and fonts from the PDF are not kept — only the text." : "";
-    return { text: `Converted **${f.name}** to ${to.toUpperCase()}.${warn}${pdfNote(to, md)}`, files: [out] };
+    return { text: `Converted **${f.name}** to ${to.toUpperCase()}.${warn}${pdfNote(to, out)}`, files: [out] };
   } },
   { id: "convert_format", category: "File conversion", desc: "Convert ANY attached file between compatible formats using the format registry: data (CSV, TSV, JSON, JSONL, XML, YAML, TOML, SQL inserts, XLSX, ODS), config (INI, CFG, CONF, ENV, PROPERTIES), subtitles (SRT, VTT, ASS, SSA, LRC), contacts/calendars (VCF, ICS), maps (GPX, KML, GeoJSON), notebooks (IPYNB → py/md/html/pdf), code/logs/diffs → txt/md/html/pdf/docx/csv, RTF/ODT/PPTX/ODP/FB2/TeX/EPUB text, archives (ZIP, TAR, GZ, TGZ repack), comic CBZ → PDF, WOFF → TTF/OTF, draw.io → DOT/Mermaid/JSON. Media, office-native, database, e-book, font and diagram rendering conversions run as background tasks automatically", params: '{"to": string (target extension), "file"?: string}', run: async (c, p) => {
     const { formatOfName, routeConversion, canonicalId, matchesSignature, hasSignature, FORMAT_BY_ID } = await import("@/lib/formats/inventory");
