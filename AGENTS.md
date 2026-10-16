@@ -10,7 +10,7 @@
 <!-- LOVABLE:END -->
 
 - `src/AGENTS.md` and `src/lib/AGENTS.md` hold scoped rules; read them before changing files there.
-- Chat attachment Plugins uses a controlled shared Popover anchored to the whole composer and selects through its existing plugin-chip callback. Why: keeps the picker above the input without navigating away or duplicating send logic.
+- Chat attachment Plugins uses one controlled Popover anchored to the composer, selecting via the plugin-chip callback. Why: picker stays above the input without navigation or duplicated send logic.
 - Credentials live only in Cloudflare Secrets/Variables or its Secrets Store, read at runtime, never in Lovable secrets. Why: Cloudflare is the credential source of truth.
 - GitHub CLI (`gh`) is used only for runtime setup tasks sourced from `tkdasofficial/vision-runtime` (runtime provisioning, its `.github` workflows, `runtime/` and `tests/` material); never for app source, code edits, or day-to-day changes. Why: keeps the app codebase (from `tkdasofficial/vision-v7`) separate from runtime provisioning.
 
