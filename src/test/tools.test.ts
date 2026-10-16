@@ -149,10 +149,13 @@ describe("file test-pass regressions", () => {
     const o = await run("convert_document", ctx([f("r.md", "# R\n\nIntro\n\n| Region | Q1 |\n|---|---|\n| North | 120 |")]), { to: "csv" });
     expect(strFromU8(o.files![0].bytes)).toBe("Region,Q1\nNorth,120\n");
   });
-  it("warns when a PDF cannot draw Hindi text", async () => {
-    const o = await run("create_document", { ...ctx(), complete: async () => "# T\n\nहिंदी" }, { format: "pdf" });
-    expect(o.text).toMatch(/5 character\(s\).*"\?"/);
-  });
+  // Hindi is now drawn with an embedded Devanagari font (multilingual export); only glyphs no font has (emoji) warn.
+  it("draws Hindi in PDFs and warns only for characters no font can draw", async () => {
+    const hi = await run("create_document", { ...ctx(), complete: async () => "# T\n\nहिंदी" }, { format: "pdf" });
+    expect(hi.text).not.toMatch(/character\(s\)/);
+    const emoji = await run("create_document", { ...ctx(), complete: async () => "# T\n\nहिंदी 😀" }, { format: "pdf" });
+    expect(emoji.text).toMatch(/1 character\(s\).*"\?"/);
+  }, 60000);
   it("reports a damaged PDF instead of crashing", async () => {
     await expect(run("pdf_merge", ctx([f("a.pdf", "%PDF-1.4 x", "application/pdf"), f("b.pdf", "nope", "application/pdf")]))).rejects.toThrow(/damaged or not a valid PDF/);
   });
