@@ -1,4 +1,5 @@
 # Roadmap
+- [x] Multilingual support (16 locale configs): request understanding, reply-language rule, PDF/DOCX/HTML/CSV/XLSX/EPUB/TXT/MD export. Holdout2 exact 88.8% / F1 96.0%; all 1177 tests, typecheck and build pass. Fonts on the live Cloudflare worker not yet verified.
 - [x] Match App Drawer opening to Projects: no nested entrances, slide starts only after the panel is built, per-frame updates touch only panel transform + scrim opacity, spring sub-stepped with a 20ms cap. Measured at 4× slower CPU: drawer slide now runs at ~60fps like Projects.
 - [x] Fix attachment-menu Plugins to open an added-plugins square picker immediately above the composer; 19 tests pass and signed-in desktop/mobile checks confirm square placement, scrollable added-plugin list, selection and draft preservation.
 - [x] Make shared content blocks fit short content and cap long content at a square; refine surfaces, borders and clipped-content fade without adding mobile controls. 74 regression tests pass; signed-in mobile/desktop light/dark checks confirm one-word/three-line/square sizing and full-content copying and expansion.

@@ -30,7 +30,7 @@ export const LOCALES: LocaleConfig[] = [
   { id: "id", name: "Indonesian", key: "indonesian", nativeName: "Bahasa Indonesia", script: "latin", dir: "ltr", fonts: ["Noto Sans", "Arial"], pdfFont: LATIN, numberLocale: "id-ID" },
   // Naskh (not Nastaliq) for PDFs: the PDF writer shapes joins but not Nastaliq's diagonal stacking.
   { id: "ur", name: "Urdu", key: "urdu", nativeName: "اردو", script: "arabic", dir: "rtl", fonts: ["Noto Nastaliq Urdu", "Noto Naskh Arabic", "Arial"], pdfFont: NOTO("NotoNaskhArabic", "NotoNaskhArabic-Regular.ttf"), numberLocale: "ur-PK" },
-  { id: "bn", name: "Bengali", key: "bengali", nativeName: "বাংলা", script: "bengali", dir: "ltr", fonts: ["Noto Sans Bengali", "Vrinda", "Nirmala UI"], pdfFont: NOTO("NotoSansBengali", "NotoSansBengali-Regular.ttf"), numberLocale: "bn-BD" },
+  { id: "bn", name: "Bengali", key: "bengali", nativeName: "বাংলা", script: "bengali", dir: "ltr", fonts: ["Noto Sans Bengali", "Vrinda", "Nirmala UI"], /* Serif: fontkit misplaces vowel signs with the Sans build (checked by rendering). */ pdfFont: NOTO("NotoSerifBengali", "NotoSerifBengali-Regular.ttf"), numberLocale: "bn-BD" },
   { id: "ta", name: "Tamil", key: "tamil", nativeName: "தமிழ்", script: "tamil", dir: "ltr", fonts: ["Noto Sans Tamil", "Latha", "Nirmala UI"], pdfFont: NOTO("NotoSansTamil", "NotoSansTamil-Regular.ttf"), numberLocale: "ta-IN" },
 ];
 export const localeById = (id: string) => LOCALES.find((l) => l.id === id);
