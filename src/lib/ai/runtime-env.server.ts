@@ -21,6 +21,12 @@ export function getSecret(name: string): string | undefined {
   return typeof v === "string" && v ? v : undefined;
 }
 
+/** The D1 database binding (env.DB), when the Worker has one. */
+export function getD1Binding(): { prepare: (sql: string) => any } | undefined {
+  const db = workerEnv()?.["DB"] as any;
+  return db && typeof db.prepare === "function" ? db : undefined;
+}
+
 /** The Workers AI binding (env.AI), when the Worker has one. */
 export function getAiBinding(): { run: (model: string, input: unknown, opts?: unknown) => Promise<any> } | undefined {
   const ai = workerEnv()?.["AI"] as any;
