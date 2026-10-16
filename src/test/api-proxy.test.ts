@@ -135,7 +135,8 @@ describe("workers ai binding path", () => {
     }
   });
 
-  it("falls back to REST when no binding exists", async () => {
+  it("on-Worker without the AI binding and without REST credentials fails as not configured (never relays)", async () => {
+    captureWorkerEnv({ DB: { prepare: () => ({}) } });
     delete process.env.CLOUDFLARE_ACCOUNT_ID;
     delete process.env.CLOUDFLARE_API_TOKEN;
     const { streamFromProvider } = await import("@/lib/ai/providers.server");
