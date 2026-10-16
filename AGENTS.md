@@ -27,4 +27,4 @@
 - Session cookie is SameSite=None + Partitioned with 30-day sliding renewal (refreshed at most daily in getCaller); every sign-in is recorded in D1 login_history with user agent and IP (pruned after 180 days). Why: keeps users signed in, including inside embedded previews; every state-changing endpoint must call assertSameOrigin to replace the CSRF protection Lax used to give.
 
 - Chat replies run detached from the browser request (Worker waitUntil, never request.signal) and the server saves the finished answer into chat_messages under the client reply id with INSERT OR IGNORE; a reopened chat whose last message is an unanswered question polls for it. Why: leaving or reloading never loses an answer.
-- Off-Worker AI calls go to the "vision" Worker `/ai/:provider` relay (keys and AI binding live there), authorized by a dedicated AI_RELAY_TOKEN; never a direct fallback. Why: provider keys never leave Cloudflare.
+- Off-Worker AI calls go to the "vision" Worker `/ai/:provider` relay (keys and AI binding live there), authorized by the caller Origin against ALLOWED_RETURN_ORIGINS; never a direct fallback. Why: provider keys never leave Cloudflare.
