@@ -36,6 +36,7 @@ const parsed = (url: string, bytes: Uint8Array) => { let f = parsedCache.get(url
 const RTL_CHAR = /[\u0590-\u08ff\ufb1d-\ufdff\ufe70-\ufefc]/;
 const STRONG_LTR = /[A-Za-z\u00c0-\u024f\u0370-\u03ff\u0400-\u04ff\u0900-\u0dff\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/;
 function scriptSlot(cp: number, han: Slot): Slot | "neutral" {
+  if (cp >= 0x30 && cp <= 0x39) return "latin"; // digits are left-to-right runs, never reversed inside RTL text
   if (cp <= 0x40 || (cp >= 0x5b && cp <= 0x60) || (cp >= 0x7b && cp <= 0xbf) || (cp >= 0x2000 && cp <= 0x206f)) return "neutral";
   if (cp >= 0x0900 && cp <= 0x097f) return "deva";
   if (cp >= 0x0980 && cp <= 0x09ff) return "beng";
@@ -77,6 +78,9 @@ export async function createTextKit(doc: PDFDocument, allText: string, fetcher: 
     if (count) lost++; return { font: std[style], ch: "?" };
   };
   type Run = { text: string; font: PDFFont; rtl: boolean };
+  const fkOf = new Map<PDFFont, any>(); for (const f of fonts.values()) fkOf.set(f.pdf, f.fk);
+  // A neutral character (space, punctuation) joins a run only if that run's font really has the glyph.
+  const canDraw = (font: PDFFont, s: string) => { const fk = fkOf.get(font); return fk ? [...s].every((c) => fk.hasGlyphForCodePoint(c.codePointAt(0)!)) : [...s].every((c) => WIN_OK.test(c)); };
   const runsOf = (text: string, style: Style, count = false): Run[] => {
     const runs: Run[] = [];
     let pendingNeutral = "";
@@ -87,15 +91,14 @@ export async function createTextKit(doc: PDFDocument, allText: string, fetcher: 
       const { font, ch: out } = fontFor(ch, style, slot, count);
       const rtl = RTL_CHAR.test(ch);
       const last = runs[runs.length - 1];
-      if (last && last.font === font && last.rtl === rtl) last.text += pendingNeutral + out;
+      if (last && last.font === font && last.rtl === rtl && canDraw(font, pendingNeutral)) last.text += pendingNeutral + out;
       else {
-        // Neutral characters between runs belong to the earlier run when it can draw them, else to this one.
-        if (pendingNeutral && last) { if ([...pendingNeutral].every((c) => WIN_OK.test(c)) && last.font === std[style]) last.text += pendingNeutral; else runs.push({ text: pendingNeutral, font: std[style], rtl: false }); }
+        if (pendingNeutral && last) { if (canDraw(last.font, pendingNeutral)) last.text += pendingNeutral; else runs.push({ text: pendingNeutral, font: std[style], rtl: false }); }
         runs.push({ text: out, font, rtl });
       }
       pendingNeutral = "";
     }
-    if (pendingNeutral) { const last = runs[runs.length - 1]; if (last) last.text += pendingNeutral; else runs.push({ text: pendingNeutral, font: std[style], rtl: false }); }
+    if (pendingNeutral) { const last = runs[runs.length - 1]; if (last && canDraw(last.font, pendingNeutral)) last.text += pendingNeutral; else runs.push({ text: pendingNeutral, font: std[style], rtl: false }); }
     return runs.map((r) => (r.font === std[style] ? { ...r, text: [...r.text].map((c) => (WIN_OK.test(c) ? c : "?")).join("") } : r));
   };
   const isRtl = (text: string) => { for (const ch of text) { if (RTL_CHAR.test(ch)) return true; if (STRONG_LTR.test(ch)) return false; } return false; };
