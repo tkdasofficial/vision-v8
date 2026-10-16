@@ -5,12 +5,12 @@
 import { analyzeRequest } from "./deep/analyze";
 import { parseRequiredNames } from "./deep/instructions";
 import { resolveReference, type ConvMsg } from "./references";
-import { detectLocale, explicitLanguages, localeById, normalizeText } from "@/lib/i18n/locales";
+import { detectLocale, explicitLanguages, localeById, localeByKey, normalizeText } from "@/lib/i18n/locales";
 import { multilingualRequirements } from "@/lib/i18n/requirements";
 
 export type ReqSource = "explicit" | "inferred";
 export type Req = { kind: string; value: string; source: ReqSource; mandatory: boolean; evidence: string };
-export type RequirementSpec = { normalized: string; reqs: Req[]; gaps: string[] };
+export type RequirementSpec = { normalized: string; reqs: Req[]; gaps: string[]; /** Locale the request is written in (detection only; never the requested output language). */ requestLocale?: string | null };
 
 // ---------- normalization: typos + Hinglish (applied to a copy used only for matching) ----------
 const TYPOS: Record<string, string> = { writ: "write", giv: "give", plz: "please", pls: "please", abt: "about", secnes: "scenes", scnes: "scenes", flim: "film", wrods: "words", wrds: "words", bulet: "bullet", bulets: "bullets", tabel: "table", tabl: "table", promts: "prompts", pargraph: "paragraph", paragrph: "paragraph", qustions: "questions", summery: "summary", emial: "email" };
@@ -149,7 +149,7 @@ export function buildSpec(text: string, history: ConvMsg[] = []): RequirementSpe
   if (/^(?:please\s+)?(?:write|tell me|say)\s+(?:something|anything|stuff)\s+(?:about\s+)?(?:it|this|that)?\.?$/i.test(t)) add("ambiguous", "topic", t);
   if (/^(?:please\s+)?(?:translate|summari[sz]e|rewrite|proofread|shorten)\s+(?:this|that|it)\.?$/i.test(t) && !hasAnswer) add("ambiguous", "missing-input", t);
 
-  return { normalized: t, reqs, gaps: coverageGaps(t, reqs) };
+  return { normalized: t, reqs, gaps: coverageGaps(t, reqs), requestLocale: reqLocale };
 }
 
 /** Deterministic coverage check: clauses that look like instructions but produced no requirement. */
@@ -178,12 +178,23 @@ export function specPrompt(spec: RequirementSpec): string {
   const explicit = spec.reqs.filter((r) => r.source === "explicit" && !["conflict", "ambiguous"].includes(r.kind));
   const inferred = spec.reqs.filter((r) => r.source === "inferred");
   const conflicts = spec.reqs.filter((r) => r.kind === "conflict"), amb = spec.reqs.filter((r) => r.kind === "ambiguous");
-  if (!explicit.length && !inferred.length && !conflicts.length && !amb.length && !spec.gaps.length) return "";
+  if (!explicit.length && !inferred.length && !conflicts.length && !amb.length && !spec.gaps.length) return languageLine(spec);
   let out = "\n\nUnderstood requirements (from the user's own words; do not drop, invent or change any):";
   if (explicit.length) out += `\n${explicit.map(show).join("\n")}`;
   if (inferred.length) out += `\nInferred (not stated — a sensible default the user may override):\n${inferred.map(show).join("\n")}`;
   if (spec.gaps.length) out += `\nAlso follow these instructions exactly as written:\n${spec.gaps.map((g) => `- "${g}"`).join("\n")}`;
   if (conflicts.length) out += `\nConflicting instructions (${conflicts.map((c) => c.value).join(", ")}): follow the most specific/explicit numeric rule and state the conflict in one short line.`;
   if (amb.some((a) => a.value !== "reference" || !spec.reqs.some((r) => r.kind === "ref"))) out += `\nThe request is missing something essential (${amb.map((a) => a.value).join(", ")}). Ask exactly one short clarifying question instead of guessing.`;
-  return out;
+  return out + languageLine(spec);
+}
+
+/** Response-language rule: an explicit request wins; otherwise reply in the request's language. Never overrides system/security rules. */
+export function languageLine(spec: RequirementSpec): string {
+  const name = (k: string) => localeByKey(k)?.name ?? k[0].toUpperCase() + k.slice(1);
+  const langs = spec.reqs.filter((r) => r.kind === "lang" && r.source === "explicit").map((r) => name(r.value));
+  const req = spec.requestLocale && spec.requestLocale !== "en" ? localeById(spec.requestLocale) : null;
+  if (!langs.length && !req) return "";
+  const keep = "Keep code, identifiers, file names, URLs, names and quoted or must-keep text exactly as written; never translate them unless asked.";
+  if (langs.length) return `\n\nResponse language: ${langs.join(" and ")} (explicitly requested${req ? `; the request itself is in ${req.name}` : ""}). Use each requested language only for the parts it was asked for. ${keep}`;
+  return `\n\nResponse language: reply in ${req!.name} (${req!.nativeName}), the language the user wrote in. ${keep}`;
 }
