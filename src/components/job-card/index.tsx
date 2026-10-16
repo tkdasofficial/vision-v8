@@ -37,6 +37,14 @@ const CleanText = ({ text }: { text: string }) => looksLikeCode(text)
 const TITLES = { code_export: "Code file", project_generate: "Project", zip_analyze: "ZIP analysis", agent_task: "Task", runtime_task: "Background task" } as const;
 const fmt = (n: number) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : n > 1024 ? `${(n / 1024).toFixed(1)} KB` : `${n} B`);
 
+/** User-facing stage names for chat tasks, mapped from real backend statuses (never simulated). */
+const AGENT_STAGE: Partial<Record<JobView["status"], string>> = {
+  queued: "Queued", thinking: "Thinking", planning: "Planning", processing: "Working",
+  writing_content: "Writing", creating_document: "Creating your file", converting_file: "Converting your file",
+  validating_output: "Validating", saving_file: "Saving", retrying: "Retrying", debugging: "Fixing an issue",
+  completed: "Delivered", completed_with_warnings: "Delivered", failed: "Failed", timed_out: "Timed Out", cancelled: "Cancelled",
+};
+
 function StatusIcon({ status }: { status: JobView["status"] }) {
   if (status === "completed") return <CheckCircle2 className="h-4 w-4 text-primary" />;
   if (status === "completed_with_warnings") return <AlertTriangle className="h-4 w-4 text-muted-foreground" />;
@@ -67,7 +75,8 @@ export default function JobCard({ job: given, onRetry, compact }: { job: JobView
   const [cancelling, setCancelling] = useState(false);
   const running = !isTerminal(job.status);
   const visible = visibleJobStatus(job);
-  const statusLine = <TaskStatus label={JOB_STATUSES[visible.status]} detail={visible.detail} startedAt={job.createdAt} endedAt={running ? undefined : job.updatedAt} failed={["failed", "timed_out", "cancelled"].includes(job.status)} />;
+  const stageLabel = job.type === "agent_task" ? (AGENT_STAGE[visible.status] ?? JOB_STATUSES[visible.status]) : JOB_STATUSES[visible.status];
+  const statusLine = <TaskStatus label={stageLabel} detail={visible.detail} startedAt={job.createdAt} endedAt={running ? undefined : job.updatedAt} failed={["failed", "timed_out", "cancelled"].includes(job.status)} />;
   const r = job.result ?? {};
   // Finished code shows only the clean code canvas — no title, badge, icons or menu.
   if (job.type === "code_export" && r.content && (job.status === "completed" || job.status === "completed_with_warnings")) {
