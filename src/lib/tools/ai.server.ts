@@ -11,11 +11,11 @@ async function run(model: string, input: unknown, timeoutMs: number, busy: strin
     catch (e: any) { throw new Error(/429|capacity|rate/i.test(String(e?.message)) ? busy : failed); }
   }
   if (getD1Binding()) throw new Error("The AI service isn't configured on the server.");
-  const token = getSecret("AI_RELAY_TOKEN");
-  if (!token) throw new Error("The AI service isn't configured on the server.");
+  const origin = (getSecret("AUTH_ORIGIN") || "").replace(/\/+$/, "");
+  if (!origin) throw new Error("The AI service isn't configured on the server.");
   const gw = (getSecret("AUTH_GATEWAY_URL") || AUTH_GATEWAY_URL).replace(/\/+$/, "");
   const res = await fetch(`${gw}/ai/run`, {
-    method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    method: "POST", headers: { Origin: origin, "Content-Type": "application/json" },
     body: JSON.stringify({ model, input }), signal: AbortSignal.timeout(timeoutMs),
   });
   const j: any = await res.json().catch(() => ({}));
