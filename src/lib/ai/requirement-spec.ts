@@ -5,6 +5,8 @@
 import { analyzeRequest } from "./deep/analyze";
 import { parseRequiredNames } from "./deep/instructions";
 import { resolveReference, type ConvMsg } from "./references";
+import { detectLocale, explicitLanguages, localeById, normalizeText } from "@/lib/i18n/locales";
+import { multilingualRequirements } from "@/lib/i18n/requirements";
 
 export type ReqSource = "explicit" | "inferred";
 export type Req = { kind: string; value: string; source: ReqSource; mandatory: boolean; evidence: string };
@@ -12,10 +14,12 @@ export type RequirementSpec = { normalized: string; reqs: Req[]; gaps: string[] 
 
 // ---------- normalization: typos + Hinglish (applied to a copy used only for matching) ----------
 const TYPOS: Record<string, string> = { writ: "write", giv: "give", plz: "please", pls: "please", abt: "about", secnes: "scenes", scnes: "scenes", flim: "film", wrods: "words", wrds: "words", bulet: "bullet", bulets: "bullets", tabel: "table", tabl: "table", promts: "prompts", pargraph: "paragraph", paragrph: "paragraph", qustions: "questions", summery: "summary", emial: "email" };
-const LANGS = "hindi|english|german|french|spanish|italian|bengali|bangla|marathi|tamil|telugu|urdu|arabic|russian|chinese|japanese|portuguese|hinglish";
+const LANGS = "simplified chinese|traditional chinese|chinese \\(simplified\\)|chinese \\(traditional\\)|korean|indonesian|hindi|english|german|french|spanish|italian|bengali|bangla|marathi|tamil|telugu|urdu|arabic|russian|chinese|japanese|portuguese|hinglish";
 export function normalize(text: string): string {
-  let t = " " + text.slice(0, 20000).replace(/[‘’]/g, "'").replace(/[“”]/g, '"') + " ";
+  const latinOther = detectLocale(text) != null;
+  let t = " " + normalizeText(text.slice(0, 20000)).replace(/[‘’]/g, "'").replace(/[“”]/g, '"') + " ";
   t = t.replace(/\b[A-Za-z]+\b/g, (w) => TYPOS[w.toLowerCase()] ?? w);
+  if (latinOther) return t.trim(); // Hinglish shorthands ("das", "ek"…) would corrupt German/Spanish/… text.
   t = t.replace(/\bbina\s+([\p{L}]+(?:\s+[\p{L}]+)?)\s+ke\b/giu, "without $1,");
   t = t.replace(/\b([\p{L}]+)\s+ke\s+saath\b/giu, "include $1");
   t = t.replace(new RegExp(`\\b(${LANGS})\\s+(?:mein|me|main)\\b`, "gi"), "in $1");
@@ -96,11 +100,15 @@ export function buildSpec(text: string, history: ConvMsg[] = []): RequirementSpe
   for (const m of t.matchAll(new RegExp(`\\b(${LANGS})\\s*(?:\\([^)]{1,20}\\)\\s*)?(${PART})\\b`, "gi"))) add("script", `${partOf(m[2])}:${m[1].toLowerCase()}`, m[0]);
   for (const m of t.matchAll(new RegExp(`\\bin\\s+(${LANGS})\\b(?!\\s*(?:\\([^)]*\\)\\s*)?(?:${PART}))`, "gi"))) {
     if (new RegExp(`(?:${PART})\\s+(?:must be |should be |written )?$`, "i").test(t.slice(Math.max(0, m.index - 30), m.index))) continue;
-    add("lang", m[1].toLowerCase(), m[0]);
+    add("lang", langKey(m[1]), m[0]);
+  }
+  const reqLocale = detectLocale(text);
+  if (reqLocale && reqLocale !== "en") {
+    for (const l of explicitLanguages(text)) if (!reqs.some((r) => r.kind === "script")) add("lang", l.key, l.evidence);
+    multilingualRequirements(text, add, (k) => reqs.some((r) => r.kind === k || `${r.kind}:${r.value}` === k));
   }
   if (!reqs.some((r) => r.kind === "lang" || r.kind === "script")) {
-    const hits = (re: RegExp) => (low.match(re) ?? []).length;
-    const inferred = /\p{Script=Devanagari}/u.test(t) ? "hindi" : hits(/\b(escribe|para|una|unos|del|cómo|qué|por favor)\b/g) >= 2 ? "spanish" : hits(/\b(écris|pour|une|avec|s'il|vous|des)\b/g) >= 2 ? "french" : hits(/\b(schreibe|für|eine|und|bitte|mit)\b/g) >= 2 ? "german" : null;
+    const inferred = reqLocale ? localeById(reqLocale)?.key ?? null : null;
     if (inferred) add("lang", inferred, "language the request is written in", { source: "inferred" });
   }
 
@@ -145,6 +153,8 @@ export function buildSpec(text: string, history: ConvMsg[] = []): RequirementSpe
 }
 
 /** Deterministic coverage check: clauses that look like instructions but produced no requirement. */
+const langKey = (s: string) => { const l = s.toLowerCase(); return /simplified/.test(l) ? "chinese-simplified" : /traditional/.test(l) ? "chinese-traditional" : l; };
+
 export function coverageGaps(t: string, reqs: Req[]): string[] {
   const ev = reqs.map((r) => r.evidence.toLowerCase()).join(" | ");
   const gaps: string[] = [];
