@@ -10,6 +10,7 @@ import { cancelJob, downloadUrl, fetchJob } from "@/lib/builder/jobs-client";
 import { downloadFile } from "@/lib/download";
 import { toast } from "sonner";
 import TaskStatus from "@/components/task-status";
+import { visibleJobStatus } from "@/lib/status-visibility";
 
 /** Downloads through an authenticated fetch so the session always reaches the server. */
 function ArtifactButton({ id, name, size }: { id: string; name: string; size?: string }) {
@@ -65,7 +66,8 @@ export default function JobCard({ job: given, onRetry, compact }: { job: JobView
   const [open, setOpen] = useState(!compact);
   const [cancelling, setCancelling] = useState(false);
   const running = !isTerminal(job.status);
-  const statusLine = <TaskStatus label={JOB_STATUSES[job.status]} detail={job.error ?? job.detail} startedAt={job.createdAt} endedAt={running ? undefined : job.updatedAt} failed={["failed", "timed_out", "cancelled"].includes(job.status)} />;
+  const visible = visibleJobStatus(job);
+  const statusLine = <TaskStatus label={JOB_STATUSES[visible.status]} detail={visible.detail} startedAt={job.createdAt} endedAt={running ? undefined : job.updatedAt} failed={["failed", "timed_out", "cancelled"].includes(job.status)} />;
   const r = job.result ?? {};
   // Finished code shows only the clean code canvas — no title, badge, icons or menu.
   if (job.type === "code_export" && r.content && (job.status === "completed" || job.status === "completed_with_warnings")) {
@@ -94,9 +96,9 @@ export default function JobCard({ job: given, onRetry, compact }: { job: JobView
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-semibold">{TITLES[job.type]}{r.name ? ` · ${r.name}` : r.fileName ? ` · ${r.fileName}` : ""}</span>
-            <Badge variant={job.status === "failed" || job.status === "timed_out" ? "destructive" : "secondary"} className="rounded-full">{JOB_STATUSES[job.status]}</Badge>
+            <Badge variant={job.status === "failed" || job.status === "timed_out" ? "destructive" : "secondary"} className="rounded-full">{JOB_STATUSES[visible.status]}</Badge>
           </div>
-          <p className="mt-0.5 truncate text-xs text-muted-foreground" aria-live="polite">{job.error ?? job.detail}</p>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground" aria-live="polite">{visible.detail}</p>
           {job.progress != null && running && <div className="mt-2 h-1 overflow-hidden rounded bg-muted"><div className="h-full bg-primary" style={{ width: `${Math.round(job.progress * 100)}%` }} /></div>}
         </div>
         <div className="flex shrink-0 gap-1">
@@ -145,7 +147,7 @@ export default function JobCard({ job: given, onRetry, compact }: { job: JobView
       {open && (
         <div className="mt-3 space-y-3 border-t border-border pt-3 text-sm">
           <ol className="space-y-1">
-            {job.steps.map((s, i) => (
+            {visible.steps.map((s, i) => (
               <li key={i} className="flex items-start gap-2 text-xs">
                 <span className={cn("mt-1 h-1.5 w-1.5 shrink-0 rounded-full", s.outcome === "error" ? "bg-destructive" : s.outcome === "warn" ? "bg-muted-foreground" : s.endedAt ? "bg-primary" : "animate-pulse bg-foreground")} />
                 <span className="font-medium">{JOB_STATUSES[s.status] ?? s.status}</span>

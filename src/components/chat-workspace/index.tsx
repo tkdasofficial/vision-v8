@@ -429,7 +429,7 @@ const ChatWorkspace = ({ tool, onMenuClick, initialMessages, chatId: externalCha
       let deepTokens = false;
       const setDeepStage = (stage: DeepStage, detail?: string) => setMessages((prev) => prev.map((m) => (m.id === replyId ? { ...m, deep: { stage, detail } } : m)));
       let deepReal = false; let lastDeep: { stage: DeepStage; detail?: string } = { stage: "analyzing" }; // once the server reports real stages, the placeholder ticker stops
-      const STATUS_MAP: Record<string, DeepStage> = { analyzing: "analyzing", planning: "planning", generating: "generating", verifying: "verifying", correcting: "correcting", validating: "validating", assembling: "crafting", retrying: "retrying", switching_provider: "switching_provider", failed: "failed" };
+      const STATUS_MAP: Record<string, DeepStage> = { analyzing: "analyzing", planning: "planning", generating: "generating", verifying: "verifying", correcting: "correcting", validating: "validating", assembling: "crafting", retrying: "retrying", failed: "failed" };
       let deepTicker: number | undefined;
       const deepShow = deep ? window.setTimeout(() => {
         clearTimeout(phaseTimer); setIsTyping(false);
