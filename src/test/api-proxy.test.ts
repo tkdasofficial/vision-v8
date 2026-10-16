@@ -38,10 +38,14 @@ describe("api-proxy", () => {
     expect(await maybeProxyToWorker(req("/api/chat", { method: "POST", body: "{}" }))).toBeNull();
   });
 
-  it("handles requests locally when API_ORIGIN is not set", async () => {
+  it("fails with a clear 503 when API_ORIGIN is not set (never runs API calls locally off-Worker)", async () => {
     delete process.env.API_ORIGIN;
     expect(getApiOrigin()).toBeUndefined();
-    expect(await maybeProxyToWorker(req("/api/chat", { method: "POST", body: "{}" }))).toBeNull();
+    const res = await maybeProxyToWorker(req("/api/chat", { method: "POST", body: "{}" }));
+    expect(res).not.toBeNull();
+    expect(res!.status).toBe(503);
+    const body = await res!.json();
+    expect(body.error).toMatch(/not configured/i);
   });
 
   it("forwards off-Worker requests to the Worker with cookie and rewritten origin", async () => {
