@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Audit and refactor backend transports to the existing Cloudflare Worker; preserve integrations and bindings, verify routing/security/tests, and identify only the remaining Worker configuration step.
 - [x] Audit and centralize sequential NVIDIA → Groq → Cloudflare text fallback; fix queue/stream capacity leaks, Hindi PDF routing and truthful file stages; 1193 tests passed, 1 skipped, automatic build/typecheck OK; signed-in failure flow and 64px desktop/mobile status checked.
 - [ ] Complete live Hindi PDF creation/download and successful provider-switch verification — blocked: preview NVIDIA/Groq bindings missing; Cloudflare returns 429 quota. No PDF was produced in the live test.
 - [x] Multilingual support (16 locale configs): request understanding, reply-language rule, PDF/DOCX/HTML/CSV/XLSX/EPUB/TXT/MD export. Holdout2 exact 88.8% / F1 96.0%; all 1177 tests, typecheck and build pass. Fonts on the live Cloudflare worker not yet verified.
