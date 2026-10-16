@@ -50,3 +50,4 @@
 - [x] Story planning required + validated outline, object-state tracking, Hindi foreign-word check, part retry, empty-review fix; 1,108 tests pass.
 - [ ] 10-scene Bolt live test — FAIL after 3/3 attempts (2026-10-15, best ≈92%). Open: false Hindi warning from "Dialogue (Hindi):" label (fixed after attempt 3, not live-verified); "stolen" premise not shown; runs take 9–11 min and the correction round regresses. Needs one fresh live run.
 - [ ] 25-scene Bolt live story test — FAIL after 5/5 live attempts (2026-10-15). Open: core taken twice (sc 12 and 17–18), core sealed in vault sc 22 then in pod sc 24 with no retrieval, plot checker missed both; hidden plan step failed in attempt 5 so the scene outline wasn't used; ~11 min per run. Needs a new test round.
+- [x] Cloudflare full backend: app deploys as one Worker (root wrangler.toml), D1 via DB binding with REST fallback, secrets via Worker env, AUTH_ORIGIN makes the frontend host-independent.
