@@ -17,6 +17,11 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    ssr: {
+      // cloudflare:sockets is a Worker runtime builtin (used by auth-gateway/src/mail.ts
+      // for SMTP); it must stay an external import in the server bundle.
+      external: ["cloudflare:sockets"],
+    },
     plugins: [
       // Only the browser build gets a service worker; it is written next to the public files.
       ...VitePWA({
