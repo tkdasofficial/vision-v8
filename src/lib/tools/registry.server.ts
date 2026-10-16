@@ -34,7 +34,8 @@ function pick(c: ToolCtx, p: any, want?: string[]): WorkFile {
   return f;
 }
 const many = (c: ToolCtx, want: string[]) => c.files.filter((f) => want.includes(kindOf(f)));
-const txt = (name: string, content: string, mime = "text/plain"): WorkFile => ({ name, mime, bytes: strToU8(content) });
+// CSV with non-ASCII text gets a UTF-8 BOM so Excel opens it as UTF-8 instead of the system code page.
+const txt = (name: string, content: string, mime = "text/plain"): WorkFile => ({ name, mime, bytes: strToU8(mime === "text/csv" && /[^\x00-\x7f]/.test(content) && !content.startsWith("\uFEFF") ? "\uFEFF" + content : content) });
 
 /** Plain text of any supported file. */
 export async function textOf(f: WorkFile, ctx?: ToolCtx): Promise<string> {
