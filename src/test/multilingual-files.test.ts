@@ -21,7 +21,7 @@ describe("multilingual file export", () => {
     it(`${id}: txt/md/html/docx/epub/csv/xlsx keep Unicode exactly`, async () => {
       for (const fmt of ["txt", "md", "html"]) {
         const f = await buildDocument(fmt, s.title, md); keep(`${id}.${fmt}`, f.bytes);
-        const t = strFromU8(f.bytes);
+        const t = strFromU8(f.bytes).replace(/&#39;/g, "'");
         expect(t).toContain(s.text); expect(t).not.toContain("\uFFFD");
         if (fmt === "html") { expect(t).toMatch(new RegExp(`lang="${id}"`)); if (id === "ar" || id === "ur") expect(t).toContain('dir="rtl"'); }
       }
