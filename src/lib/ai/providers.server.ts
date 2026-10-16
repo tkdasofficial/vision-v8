@@ -52,6 +52,12 @@ async function attemptProvider(t: ModelRef, messages: unknown[], opts: { maxToke
   if (signal.aborted) return { ok: false, status: 499, reason: "cancelled" };
   if (opts.deadlineAt && Date.now() >= opts.deadlineAt) return { ok: false, status: 504, reason: "request deadline reached" };
   if (_attempt > 0) await opts.onEvent?.({ stage: "retrying", provider: t.provider, model: t.label });
+  // On the Cloudflare Worker, the AI binding (env.AI) is the primary path — it needs no
+  // API token and does not consume the REST API quota. REST is the off-Worker fallback.
+  if (t.provider === "cf") {
+    const bound = await attemptWorkersAiBinding(t, messages, opts, signal);
+    if (bound) return bound;
+  }
   const { url, key } = endpoint(t);
   if (!key) return { ok: false, status: 503, reason: "not configured" };
   const { limiter } = await import("./rate-limiter");
