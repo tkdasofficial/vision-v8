@@ -5,10 +5,16 @@ import { allowedBackendOrigin, configuredOrigins, isBackendPath } from "@/lib/ba
 import { createCloudflareBoundary } from "@/lib/cloud/worker-boundary";
 import { captureWorkerEnv } from "@/lib/ai/runtime-env.server";
 import { d1 } from "@/lib/cloud/d1.server";
+import { stableRpcPath } from "@/lib/rpc-id";
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); captureWorkerEnv({}); });
 
 describe("frontend goes only to configured Cloudflare", () => {
+  it("maps Vite's dev IDs to matching stable production handler IDs", () => {
+    const metadata = btoa(JSON.stringify({ file: "/src/lib/cloud/auth.functions.ts?tss-serverfn-split", export: "getCurrentUser_createServerFn_handler" })).replace(/=/g, "");
+    expect(stableRpcPath(`/_serverFn/${metadata}`)).toBe("/_serverFn/getCurrentUser_createServerFn_handler");
+    expect(stableRpcPath("/_serverFn/getCurrentUser_createServerFn_handler")).toBe("/_serverFn/getCurrentUser_createServerFn_handler");
+  });
   it.each(["/api/chat", "/api/files?project=abc", "/api/jobs/123", "/api/artifacts/123", "/_serverFn/opaque-id"]) ("routes %s with credentials and no local fallback", async (path) => {
     vi.stubEnv("VITE_CLOUDFLARE_API_URL", "https://backend.example/");
     const f = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("ok"));

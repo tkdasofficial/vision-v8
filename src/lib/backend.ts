@@ -1,4 +1,5 @@
 // Public transport configuration only. Service credentials never belong here.
+import { stableRpcPath } from "./rpc-id";
 export const DEFAULT_BACKEND_URL = "https://vision.tusharkantidasofficial.workers.dev";
 
 export function normalizeBackendUrl(value: string): string {
@@ -20,7 +21,7 @@ export async function backendFetch(input: RequestInfo | URL, init?: RequestInit)
   const raw = input instanceof Request ? input.url : String(input);
   const parsed = new URL(raw, typeof window === "undefined" ? DEFAULT_BACKEND_URL : window.location.origin);
   if (!/^\/(api\/|_serverFn\/)/.test(parsed.pathname)) throw new Error("Not an application backend request.");
-  const target = backendUrl(parsed.pathname + parsed.search);
+  const target = backendUrl(stableRpcPath(parsed.pathname) + parsed.search);
   const options = { ...init, credentials: "include" as const };
   const response = input instanceof Request
     ? await fetch(new Request(target, input), options)
