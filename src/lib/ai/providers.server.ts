@@ -6,15 +6,16 @@ import { getSecret, getAiBinding, getD1Binding } from "./runtime-env.server";
 import { AUTH_GATEWAY_URL } from "@/lib/cloud/auth-gateway";
 import type { ProviderEvent } from "./orchestrator.server";
 
-export function endpoint(t: ModelRef): { url: string; key?: string } {
+export function endpoint(t: ModelRef): { url: string; key?: string; origin?: string } {
   // Off the Cloudflare Worker (no bindings), every AI call goes through the Cloudflare
-  // "vision" Worker's /ai relay, which holds the provider keys. There is no direct fallback:
-  // without AI_RELAY_TOKEN the call fails as "not configured".
+  // "vision" Worker's /ai relay, which holds the provider keys. There is no direct fallback.
+  // The relay authorizes callers by their Origin header against its ALLOWED_RETURN_ORIGINS
+  // allowlist, so the app sends its public origin (AUTH_ORIGIN).
   if (!getAiBinding() && !getD1Binding()) {
     const gw = (getSecret("AUTH_GATEWAY_URL") || AUTH_GATEWAY_URL).replace(/\/+$/, "");
-    const key = getSecret("AI_RELAY_TOKEN");
-    if (!key) console.error(JSON.stringify({ tag: "[ai:relay]", error: "AI_RELAY_TOKEN is not set; AI calls cannot reach the Cloudflare Worker" }));
-    return { url: `${gw}/ai/${t.provider}`, key };
+    const origin = (getSecret("AUTH_ORIGIN") || "").replace(/\/+$/, "");
+    if (!origin) console.error(JSON.stringify({ tag: "[ai:relay]", error: "AUTH_ORIGIN is not set; AI calls cannot reach the Cloudflare Worker" }));
+    return { url: `${gw}/ai/${t.provider}`, origin };
   }
   if (t.provider === "groq") return { url: "https://api.groq.com/openai/v1/chat/completions", key: getSecret("GROQ_API_KEY") };
   if (t.provider === "nvidia") return { url: "https://integrate.api.nvidia.com/v1/chat/completions", key: getSecret("NVIDIA_API_KEY") };
@@ -68,8 +69,8 @@ async function attemptProvider(t: ModelRef, messages: unknown[], opts: { maxToke
     const bound = await attemptWorkersAiBinding(t, messages, opts, signal);
     if (bound) return bound;
   }
-  const { url, key } = endpoint(t);
-  if (!key) return { ok: false, status: 503, reason: "not configured" };
+  const { url, key, origin } = endpoint(t);
+  if (!key && !origin) return { ok: false, status: 503, reason: "not configured" };
   const { limiter } = await import("./rate-limiter");
   if (!limiter.available(t.provider)) return { ok: false, status: 429, reason: "provider cooling down" };
   let release: () => void;
@@ -83,7 +84,7 @@ async function attemptProvider(t: ModelRef, messages: unknown[], opts: { maxToke
   try {
     const res = await fetch(url, {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      headers: { ...(key ? { Authorization: `Bearer ${key}` } : {}), ...(origin ? { Origin: origin } : {}), "Content-Type": "application/json" },
       body: JSON.stringify({
         model: t.model,
         messages,
