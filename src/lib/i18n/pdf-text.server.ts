@@ -65,22 +65,22 @@ export async function createTextKit(doc: PDFDocument, allText: string, fetcher: 
   }));
   let lost = 0;
   const order: Slot[] = ["latin", han, "sc", "tc", "jp", "hang", "deva", "beng", "taml", "arab"];
-  const fontFor = (ch: string, style: Style, slot: Slot): { font: PDFFont; ch: string } => {
+  const fontFor = (ch: string, style: Style, slot: Slot, count: boolean): { font: PDFFont; ch: string } => {
     if (WIN_OK.test(ch) && slot !== "arab") return { font: std[style], ch };
     const cp = ch.codePointAt(0)!;
     for (const s of [slot, ...order]) { const f = fonts.get(s); if (f && f.fk.hasGlyphForCodePoint(cp)) return { font: f.pdf, ch }; }
     if (WIN_OK.test(ch)) return { font: std[style], ch };
-    lost++; return { font: std[style], ch: "?" };
+    if (count) lost++; return { font: std[style], ch: "?" };
   };
   type Run = { text: string; font: PDFFont; rtl: boolean };
-  const runsOf = (text: string, style: Style): Run[] => {
+  const runsOf = (text: string, style: Style, count = false): Run[] => {
     const runs: Run[] = [];
     let pendingNeutral = "";
     for (const ch of text) {
       const s = scriptSlot(ch.codePointAt(0)!, han);
       if (s === "neutral" && runs.length) { pendingNeutral += ch; continue; }
       const slot = s === "neutral" ? "latin" : s;
-      const { font, ch: out } = fontFor(ch, style, slot);
+      const { font, ch: out } = fontFor(ch, style, slot, count);
       const rtl = RTL_CHAR.test(ch);
       const last = runs[runs.length - 1];
       if (last && last.font === font && last.rtl === rtl) last.text += pendingNeutral + out;
@@ -99,11 +99,11 @@ export async function createTextKit(doc: PDFDocument, allText: string, fetcher: 
   return {
     width, isRtl, lost: () => lost,
     draw(page, text, x, y, size, style, maxWidth) {
-      let runs = runsOf(text, style);
+      let runs = runsOf(text, style, true);
       const rtl = isRtl(text);
       // Minimal bidi: in a right-to-left line the runs are laid out right-to-left; fontkit already orders
       // glyphs inside an Arabic-script run visually, and left-to-right runs (numbers, Latin) keep their order.
-      if (rtl) runs = runs.reverse().map((r) => (r.rtl ? r : { ...r, text: r.text }));
+      if (rtl) runs = runs.reverse();
       const total = runs.reduce((w, r) => w + r.font.widthOfTextAtSize(r.text, size), 0);
       let cx = rtl ? x + Math.max(0, maxWidth - total) : x;
       for (const r of runs) { if (r.text) page.drawText(r.text, { x: cx, y, size, font: r.font, color: rgb(0.1, 0.1, 0.12) }); cx += r.font.widthOfTextAtSize(r.text, size); }
