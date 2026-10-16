@@ -75,7 +75,8 @@ export default function JobCard({ job: given, onRetry, compact }: { job: JobView
   const [cancelling, setCancelling] = useState(false);
   const running = !isTerminal(job.status);
   const visible = visibleJobStatus(job);
-  const statusLine = <TaskStatus label={JOB_STATUSES[visible.status]} detail={visible.detail} startedAt={job.createdAt} endedAt={running ? undefined : job.updatedAt} failed={["failed", "timed_out", "cancelled"].includes(job.status)} />;
+  const stageLabel = job.type === "agent_task" ? (AGENT_STAGE[visible.status] ?? JOB_STATUSES[visible.status]) : JOB_STATUSES[visible.status];
+  const statusLine = <TaskStatus label={stageLabel} detail={visible.detail} startedAt={job.createdAt} endedAt={running ? undefined : job.updatedAt} failed={["failed", "timed_out", "cancelled"].includes(job.status)} />;
   const r = job.result ?? {};
   // Finished code shows only the clean code canvas — no title, badge, icons or menu.
   if (job.type === "code_export" && r.content && (job.status === "completed" || job.status === "completed_with_warnings")) {
