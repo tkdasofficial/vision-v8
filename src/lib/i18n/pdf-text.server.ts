@@ -3,6 +3,8 @@
 // every other character is drawn with an embedded, subsetted Noto font for its script. Shaping (Arabic joining,
 // Indic conjuncts) is done by fontkit; this module adds run splitting, a minimal bidi pass for right-to-left
 // lines and per-glyph font fallback. Characters no font covers are drawn as "?" and counted.
+// @pdf-lib/fontkit's Indic shaper (Devanagari/Bengali/Tamil) calls the global regeneratorRuntime.
+import "regenerator-runtime/runtime";
 import fontkit from "@pdf-lib/fontkit";
 import { StandardFonts, rgb, type PDFDocument, type PDFFont, type PDFPage } from "pdf-lib";
 import { chineseVariant, localeById } from "./locales";

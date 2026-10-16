@@ -72,6 +72,7 @@
         "react-markdown": "^10.1.0",
         "react-resizable-panels": "^4.6.5",
         "recharts": "^2.15.4",
+        "regenerator-runtime": "^0.14.1",
         "rehype-katex": "^7.0.1",
         "remark-breaks": "^4.0.0",
         "remark-gfm": "^4.0.1",
@@ -2021,7 +2022,7 @@
 
     "regenerate-unicode-properties": ["regenerate-unicode-properties@10.3.0", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/regenerate-unicode-properties/-/regenerate-unicode-properties-10.3.0.tgz", { "dependencies": { "regenerate": "^1.4.2" } }, "sha512-9ns8odR8e9q3otKeHj3DE80jZYKg6zVeZKE+zQmRKXFoVUcuiTGeO6iusDhPRoIQQPVPRvH+SfBhrTud4eczuw=="],
 
-    "regenerator-runtime": ["regenerator-runtime@0.13.11", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/regenerator-runtime/-/regenerator-runtime-0.13.11.tgz", {}, "sha512-kY1AZVr2Ra+t+piVaJ4gxaFaReZVH40AKNo7UCX6W+dEwBo/2oZJzqfuN1qLq1oL45o56cPaTXELwrTh8Fpggg=="],
+    "regenerator-runtime": ["regenerator-runtime@0.14.1", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/regenerator-runtime/-/regenerator-runtime-0.14.1.tgz", {}, "sha512-dYnhHh0nJoMfnkZs6GmmhFknAGRrLznOu5nc9ML+EJxGvrx6H7teuevqVqCuPcPK//3eDrrjQhehXVx9cnkGdw=="],
 
     "regexp.prototype.flags": ["regexp.prototype.flags@1.5.4", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/regexp.prototype.flags/-/regexp.prototype.flags-1.5.4.tgz", { "dependencies": { "call-bind": "^1.0.8", "define-properties": "^1.2.1", "es-errors": "^1.3.0", "get-proto": "^1.0.1", "gopd": "^1.2.0", "set-function-name": "^2.0.2" } }, "sha512-dYqgNSZbDwkaJ2ceRd9ojCGjBq+mOm9LmtXnAnEGyHhN/5R7iDW2TRw3h+o/jCFxus3P2LfWIIiwowAjANm7IA=="],
 
@@ -2618,6 +2619,8 @@
     "babel-dead-code-elimination/@babel/parser": ["@babel/parser@7.29.7", "", { "dependencies": { "@babel/types": "^7.29.7" }, "bin": "./bin/babel-parser.js" }, "sha512-hnORnjP/1P/zFEndoeX+n+t1RwWRJiJpM/jO7FW32Kn9r5+sJB2JWOdYo4L6k78j15eCwY3Gm/7364B1EMwtNg=="],
 
     "babel-dead-code-elimination/@babel/types": ["@babel/types@7.29.7", "", { "dependencies": { "@babel/helper-string-parser": "^7.29.7", "@babel/helper-validator-identifier": "^7.29.7" } }, "sha512-4zBIxpPzowiZpusoFkyGVwakdRJUyuH5PxQ/PrqghfdFWWasvnCdPfQXHrenDai+gyLARulZjZowCOj6fjT4pA=="],
+
+    "canvg/regenerator-runtime": ["regenerator-runtime@0.13.11", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/regenerator-runtime/-/regenerator-runtime-0.13.11.tgz", {}, "sha512-kY1AZVr2Ra+t+piVaJ4gxaFaReZVH40AKNo7UCX6W+dEwBo/2oZJzqfuN1qLq1oL45o56cPaTXELwrTh8Fpggg=="],
 
     "cssstyle/cssom": ["cssom@0.3.8", "", {}, "sha512-b0tGHbfegbhPJpxpiBPU2sCkigAqtM9O121le6bbOlgyV+NyGyCmVfJ6QW9eRjz8CpNfWEOYBIMIGRYkLwsIYg=="],
 
