@@ -28,3 +28,8 @@ secret_name = "SMTP_PASSWORD"
 binding = "DB"
 database_name = "vision"
 database_id = "ded73090-4d47-45ac-952f-24ae2beaba5f"
+
+# Workers AI binding for the /ai relay (Cloudflare model). NVIDIA_API_KEY and
+# GROQ_API_KEY are Worker secrets already set on "vision".
+[ai]
+binding = "AI"
