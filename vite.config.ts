@@ -17,6 +17,14 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    resolve: {
+      alias: {
+        // Dev-only stand-in for the Worker runtime builtin used by auth-gateway/src/mail.ts.
+        // The production build externalizes it instead (build.rolldownOptions.external below),
+        // so the deployed Worker uses the real builtin.
+        "cloudflare:sockets": new URL("./src/test/stubs/cloudflare-sockets.ts", import.meta.url).pathname,
+      },
+    },
     build: {
       rolldownOptions: {
         // cloudflare:sockets is a Worker runtime builtin (used by auth-gateway/src/mail.ts
