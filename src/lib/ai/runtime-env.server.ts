@@ -11,7 +11,9 @@ export function captureWorkerEnv(env: unknown) {
 }
 
 function workerEnv(): Bindings | undefined {
-  return (globalThis as any)[KEY] as Bindings | undefined;
+  // __visionWorkerEnv is set by src/server.ts (dev entry); __env__ is set by the
+  // nitro Cloudflare preset on every request in the deployed Worker bundle.
+  return ((globalThis as any)[KEY] ?? (globalThis as any).__env__) as Bindings | undefined;
 }
 
 export function getSecret(name: string): string | undefined {
