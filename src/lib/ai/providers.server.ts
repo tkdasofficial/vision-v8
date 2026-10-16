@@ -3,6 +3,7 @@
 // Cloudflare Worker env bindings (NVIDIA_API_KEY, GROQ_API_KEY), read by getSecret.
 import type { ModelRef } from "./models.server";
 import { getSecret } from "./runtime-env.server";
+import type { ProviderEvent } from "./orchestrator.server";
 
 export function endpoint(t: ModelRef): { url: string; key?: string } {
   if (t.provider === "groq") return { url: "https://api.groq.com/openai/v1/chat/completions", key: getSecret("GROQ_API_KEY") };
@@ -36,28 +37,32 @@ const CONNECT_TIMEOUT_MS = AI_LIMITS.connectMs;
  * cool-downs, missing config, permission and invalid-request errors fall through to the next model at once.
  * Retries happen before any byte is streamed, so they never duplicate output.
  */
-export async function streamFromProvider(t: ModelRef, messages: unknown[], opts: { maxTokens: number; deep: boolean }, signal: AbortSignal): Promise<ProviderResult> {
+export async function streamFromProvider(t: ModelRef, messages: unknown[], opts: { maxTokens: number; deep: boolean; deadlineAt?: number; onEvent?: (event: ProviderEvent) => void | Promise<void> }, signal: AbortSignal): Promise<ProviderResult> {
   const { withRetry, classifyFailure } = await import("./failures");
   const { result } = await withRetry((attempt) => attemptProvider(t, messages, opts, signal, attempt), {
-    classify: (r) => (r.ok ? null : /not configured|cooling down|queue full/.test(r.reason) ? "permanent" : classifyFailure(r.status, r.reason)),
+    classify: (r) => (r.ok ? null : /not configured|cooling down|queue full/.test(r.reason) || failureCategory(r.status, r.reason) === "quota" ? "permanent" : classifyFailure(r.status, r.reason)),
     signal,
-    onRetry: (i) => console.log(JSON.stringify({ tag: "[ai:retry]", provider: t.provider, model: t.model, ...i })),
+    deadlineAt: opts.deadlineAt,
+    onRetry: (i) => { console.log(JSON.stringify({ tag: "[ai:retry]", provider: t.provider, model: t.model, ...i })); },
   });
   return result;
 }
 
-async function attemptProvider(t: ModelRef, messages: unknown[], opts: { maxTokens: number; deep: boolean }, signal: AbortSignal, _attempt: number): Promise<ProviderResult> {
+async function attemptProvider(t: ModelRef, messages: unknown[], opts: { maxTokens: number; deep: boolean; deadlineAt?: number; onEvent?: (event: ProviderEvent) => void | Promise<void> }, signal: AbortSignal, _attempt: number): Promise<ProviderResult> {
+  if (signal.aborted) return { ok: false, status: 499, reason: "cancelled" };
+  if (opts.deadlineAt && Date.now() >= opts.deadlineAt) return { ok: false, status: 504, reason: "request deadline reached" };
+  if (_attempt > 0) await opts.onEvent?.({ stage: "retrying", provider: t.provider, model: t.label });
   const { url, key } = endpoint(t);
   if (!key) return { ok: false, status: 503, reason: "not configured" };
   const { limiter } = await import("./rate-limiter");
   if (!limiter.available(t.provider)) return { ok: false, status: 429, reason: "provider cooling down" };
   let release: () => void;
-  try { release = await limiter.acquire(t.provider); } catch { return { ok: false, status: 429, reason: "rate limit queue full" }; }
+  try { release = await limiter.acquire(t.provider, undefined, signal); } catch { return { ok: false, status: signal.aborted ? 499 : 429, reason: "rate limit queue full" }; }
   const t0 = Date.now();
   const ctrl = new AbortController();
   const onAbort = () => ctrl.abort();
   signal.addEventListener("abort", onAbort);
-  const timer = setTimeout(() => ctrl.abort(), CONNECT_TIMEOUT_MS);
+  const timer = setTimeout(() => ctrl.abort(), Math.max(1, Math.min(CONNECT_TIMEOUT_MS, (opts.deadlineAt ?? Infinity) - Date.now())));
   const log = (status: number) => console.log(JSON.stringify({ tag: "[ai:call]", provider: t.provider, model: t.model, status, kind: status >= 200 && status < 300 ? "ok" : status === 499 ? "cancelled" : status === 504 ? "timeout" : "error", ms: Date.now() - t0, ...limiter.snapshot(t.provider) }));
   try {
     const res = await fetch(url, {
@@ -76,9 +81,21 @@ async function attemptProvider(t: ModelRef, messages: unknown[], opts: { maxToke
     limiter.report(t.provider, res.status, res.headers.get("retry-after"));
     log(res.status);
     if (res.ok && res.body) {
-      // Hold the concurrency slot until the stream finishes.
-      const body = res.body.pipeThrough(new TransformStream<Uint8Array, Uint8Array>({ flush() { release(); } }));
-      signal.addEventListener("abort", () => release(), { once: true });
+      // Release on every termination path, not just flush (which never runs after a stream error).
+      const reader = res.body.getReader();
+      let ended = false;
+      let streamTimer: ReturnType<typeof setTimeout> | undefined;
+      const cleanup = () => { if (ended) return; ended = true; release(); signal.removeEventListener("abort", abortStream); clearTimeout(streamTimer); };
+      const abortStream = () => { ctrl.abort(); void reader.cancel().catch(() => {}); cleanup(); };
+      streamTimer = opts.deadlineAt ? setTimeout(abortStream, Math.max(1, opts.deadlineAt - Date.now())) : undefined;
+      signal.addEventListener("abort", abortStream, { once: true });
+      const body = new ReadableStream<Uint8Array>({
+        async pull(controller) {
+          try { const chunk = await reader.read(); if (chunk.done) { cleanup(); controller.close(); } else controller.enqueue(chunk.value); }
+          catch (error) { cleanup(); controller.error(error); }
+        },
+        async cancel(reason) { cleanup(); await reader.cancel(reason); },
+      });
       return { ok: true, body };
     }
     release();

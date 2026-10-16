@@ -17,6 +17,8 @@ export function routeRequest(content: string, mode: ChatMode = "default"): Reque
   // Deep Thinking, Research and Coding always answer in chat.
   if (mode !== "default") return { kind: "chat" };
   const short = content.length <= SHORT;
+  // Hindi document requests use native verbs, not English-only create/make triggers.
+  if (short && /(?:बना(?:ओ|एँ|एं|इए|ना)|तैयार\s+कर|सेव\s+कर|बदल(?:ो|ें)|निर्यात)/u.test(content) && /\b(?:pdf|docx|xlsx|csv|epub)\b|पीडीएफ|दस्तावेज़/u.test(content.toLowerCase())) return { kind: "tool" };
 
   const isTool = short && (
     /\b(qr\s*code|barcode|code ?128|code ?39|ean-?13|ean-?8|upc-?[ae]|sha-?(1|256|384|512)|checksum|hash of|base64|jwt|uuid|generate (a )?password|strong password|unit conver|convert \d|chart|bar graph|line graph|pie chart|diagram|flowchart|mermaid|gantt|word document|\.docx|docx|epub|e-?book|fetch (the )?(page|url|website)|scrape|extract (text|links)|redact|privacy scan|json to csv|csv to json)\b/i.test(content)

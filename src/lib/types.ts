@@ -117,4 +117,4 @@ export type ChatMessage = {
   deep?: { stage: DeepStage; seconds?: number; detail?: string };
 };
 
-export type DeepStage = "thinking" | "analyzing" | "planning" | "researching" | "working" | "generating" | "verifying" | "correcting" | "validating" | "crafting" | "done" | "failed";
+export type DeepStage = "thinking" | "analyzing" | "planning" | "researching" | "working" | "generating" | "verifying" | "correcting" | "validating" | "crafting" | "retrying" | "switching_provider" | "done" | "failed";

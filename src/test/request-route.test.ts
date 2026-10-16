@@ -27,6 +27,10 @@ describe("request routing", () => {
     expect(routeRequest("make a qr code for https://example.com").kind).toBe("tool");
     expect(routeRequest("create a pdf of my resume").kind).toBe("tool");
   });
+  it("routes the short Hindi PDF request to actual file creation", () => {
+    expect(routeRequest("भारत के बारे में एक छोटी हिंदी PDF बनाओ")).toEqual({ kind: "tool" });
+    expect(routeRequest("भारत के बारे में एक छोटी हिंदी PDF बनाओ", "deep")).toEqual({ kind: "chat" });
+  });
   it("explicit code files are exported", () => {
     expect(routeRequest("save the script as a py file")).toEqual({ kind: "code_export", language: "py" });
   });

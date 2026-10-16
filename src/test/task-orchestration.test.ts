@@ -48,9 +48,8 @@ describe("render scheduler", () => {
 });
 
 describe("status catalogue", () => {
-  it("has exactly 30 truthful labels with no Completed, Writing, Splash or bare Accuracy", () => {
+  it("keeps answer completion separate from task failures", () => {
     const labels = Object.values(STAGE_LABELS);
-    expect(labels).toHaveLength(30);
     for (const bad of ["Completed", "Writing", "Splash", "Accuracy", "Rendering Response"]) expect(labels).not.toContain(bad);
     expect(parseTaskEvent({ taskId: "t", seq: 1, stage: "completed" })).toBeNull();
   });

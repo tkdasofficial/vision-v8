@@ -10,7 +10,7 @@ export const PROVIDER_LIMITS: Record<string, LimitConfig> = {
   cf: { rpm: 300, concurrency: 4 }, // Workers AI text-generation default is 300 req/min per account
 };
 
-type Waiter = () => void;
+type Waiter = { resolve: () => void; reject: (error: Error) => void };
 type State = { stamps: number[]; active: number; queue: Waiter[]; coolUntil: number; failures: number; openUntil: number };
 
 export class RateLimiter {
@@ -39,15 +39,25 @@ export class RateLimiter {
   }
 
   /** Waits for a concurrency slot and RPM capacity. Throws if it would exceed maxWaitMs. Returns release(). */
-  async acquire(key: string, sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms))): Promise<() => void> {
+  async acquire(key: string, sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)), signal?: AbortSignal): Promise<() => void> {
     const v = this.st(key), lim = this.limits[key] ?? { rpm: 60, concurrency: 2 };
     const start = this.now();
-    if (v.active >= lim.concurrency) await new Promise<void>((r) => v.queue.push(r));
-    v.active++;
+    if (signal?.aborted) throw new Error("cancelled");
+    if (v.active >= lim.concurrency) await new Promise<void>((resolve, reject) => {
+      const remove = () => { const i = v.queue.indexOf(waiter); if (i >= 0) v.queue.splice(i, 1); };
+      const cleanup = () => { clearTimeout(timer); signal?.removeEventListener("abort", abort); };
+      const abort = () => { remove(); cleanup(); reject(new Error("cancelled")); };
+      const waiter: Waiter = { resolve: () => { cleanup(); resolve(); }, reject: (e) => { cleanup(); reject(e); } };
+      const timer = setTimeout(() => { remove(); waiter.reject(new Error("rate limit queue full")); }, this.maxWaitMs);
+      signal?.addEventListener("abort", abort, { once: true });
+      v.queue.push(waiter);
+    });
+    else v.active++;
     let d: number;
     while ((d = this.delayFor(key)) > 0) {
       if (this.now() - start + d > this.maxWaitMs) { this.release(key); throw new Error(`rate limit: ${key} busy`); }
       await sleep(d);
+      if (signal?.aborted) { this.release(key); throw new Error("cancelled"); }
     }
     v.stamps.push(this.now());
     let done = false;
@@ -56,8 +66,10 @@ export class RateLimiter {
 
   private release(key: string) {
     const v = this.st(key);
-    v.active = Math.max(0, v.active - 1);
-    v.queue.shift()?.();
+    const next = v.queue.shift();
+    // Transfer the reserved slot to the waiter synchronously; a new caller cannot steal it.
+    if (next) next.resolve();
+    else v.active = Math.max(0, v.active - 1);
   }
 
   /** Records a provider outcome: 429 sets a cool-down (Retry-After), repeated 5xx/timeouts open the circuit. */
@@ -65,7 +77,8 @@ export class RateLimiter {
     const v = this.st(key), t = this.now();
     if (status === 429) {
       const sec = Number(retryAfter);
-      v.coolUntil = t + (Number.isFinite(sec) && sec > 0 ? Math.min(sec, 120) * 1000 : 10_000);
+      const dateDelay = retryAfter ? Date.parse(retryAfter) - t : NaN;
+      v.coolUntil = t + (Number.isFinite(sec) && sec > 0 ? sec * 1000 : Number.isFinite(dateDelay) && dateDelay > 0 ? dateDelay : 10_000);
       return;
     }
     if (status >= 500 || status === 504) {
@@ -80,6 +93,8 @@ export class RateLimiter {
     const v = this.st(key);
     return { active: v.active, queued: v.queue.length, lastMinute: v.stamps.filter((x) => this.now() - x < 60_000).length, coolingMs: Math.max(0, v.coolUntil - this.now()), open: v.openUntil > this.now() };
   }
+  /** Clear idle state for isolated deterministic tests; never reset active reservations. */
+  reset() { for (const [key, state] of this.s) if (!state.active && !state.queue.length) this.s.delete(key); }
 }
 
 export const limiter = new RateLimiter();

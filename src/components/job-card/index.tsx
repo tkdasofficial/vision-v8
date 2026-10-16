@@ -9,6 +9,7 @@ import { JOB_STATUSES, isTerminal, type JobView } from "@/lib/builder/statuses";
 import { cancelJob, downloadUrl, fetchJob } from "@/lib/builder/jobs-client";
 import { downloadFile } from "@/lib/download";
 import { toast } from "sonner";
+import TaskStatus from "@/components/task-status";
 
 /** Downloads through an authenticated fetch so the session always reaches the server. */
 function ArtifactButton({ id, name, size }: { id: string; name: string; size?: string }) {
@@ -64,6 +65,7 @@ export default function JobCard({ job: given, onRetry, compact }: { job: JobView
   const [open, setOpen] = useState(!compact);
   const [cancelling, setCancelling] = useState(false);
   const running = !isTerminal(job.status);
+  const statusLine = <TaskStatus label={JOB_STATUSES[job.status]} detail={job.error ?? job.detail} startedAt={job.createdAt} endedAt={running ? undefined : job.updatedAt} failed={["failed", "timed_out", "cancelled"].includes(job.status)} />;
   const r = job.result ?? {};
   // Finished code shows only the clean code canvas — no title, badge, icons or menu.
   if (job.type === "code_export" && r.content && (job.status === "completed" || job.status === "completed_with_warnings")) {
@@ -74,6 +76,7 @@ export default function JobCard({ job: given, onRetry, compact }: { job: JobView
     const last = r.steps?.length ? r.steps[r.steps.length - 1] : null;
     return (
       <div className="space-y-3">
+        {statusLine}
         {r.steps?.map((s: any, i: number) => s.preview?.kind === "svg" && <img key={i} src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(s.preview.content)}`} alt="" className="max-h-96 w-full rounded-xl border border-border bg-background object-contain" />)}
         {job.artifacts.length > 0 && <div className="flex flex-wrap gap-2">{job.artifacts.map((a) => <ArtifactButton key={a.id} id={a.id} name={a.name} />)}</div>}
         <CleanText text={last ? (last.preview?.kind === "markdown" ? last.preview.content : last.text ?? "") : r.answer} />
@@ -82,7 +85,7 @@ export default function JobCard({ job: given, onRetry, compact }: { job: JobView
   }
   // While working: a quiet thinking pulse instead of status words.
   if (job.type === "agent_task" && running) {
-    return <div className="flex items-center gap-1.5 py-2" role="status" aria-label="Working">{[0, 1, 2].map((i) => <span key={i} className="size-2 animate-pulse rounded-full bg-muted-foreground" style={{ animationDelay: `${i * 0.2}s` }} />)}</div>;
+    return statusLine;
   }
   return (
     <div className="rounded-2xl border border-border bg-card p-4 text-card-foreground">

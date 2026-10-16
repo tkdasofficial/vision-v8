@@ -427,20 +427,13 @@ const ChatWorkspace = ({ tool, onMenuClick, initialMessages, chatId: externalCha
       const deep = taskMode === "deep";
       const deepStart = Date.now();
       let deepTokens = false;
-      let deepStageIdx = 0;
       const setDeepStage = (stage: DeepStage, detail?: string) => setMessages((prev) => prev.map((m) => (m.id === replyId ? { ...m, deep: { stage, detail } } : m)));
       let deepReal = false; let lastDeep: { stage: DeepStage; detail?: string } = { stage: "analyzing" }; // once the server reports real stages, the placeholder ticker stops
-      const STATUS_MAP: Record<string, DeepStage> = { analyzing: "analyzing", planning: "planning", generating: "generating", verifying: "verifying", correcting: "correcting", validating: "validating", assembling: "crafting" };
+      const STATUS_MAP: Record<string, DeepStage> = { analyzing: "analyzing", planning: "planning", generating: "generating", verifying: "verifying", correcting: "correcting", validating: "validating", assembling: "crafting", retrying: "retrying", switching_provider: "switching_provider", failed: "failed" };
       let deepTicker: number | undefined;
       const deepShow = deep ? window.setTimeout(() => {
         clearTimeout(phaseTimer); setIsTyping(false);
         setMessages((prev) => prev.some((m) => m.id === replyId) ? prev : [...prev, { id: replyId, role: "assistant", content: "", timestamp: new Date(), toolId: tool?.id, executionMode: "deep", deep: lastDeep }]);
-        deepStageIdx = 1;
-        deepTicker = window.setInterval(() => {
-          if (deepTokens || deepReal) return;
-          deepStageIdx = Math.min(deepStageIdx + 1, DEEP_STAGES.length - 2);
-          setDeepStage(DEEP_STAGES[deepStageIdx]);
-        }, 2600);
       }, 1400) : undefined;
       const stopDeepTimers = () => { if (deepShow) clearTimeout(deepShow); if (deepTicker) clearInterval(deepTicker); };
       let taskRef: TaskState | null = null;
@@ -465,7 +458,7 @@ const ChatWorkspace = ({ tool, onMenuClick, initialMessages, chatId: externalCha
       const stopped = ctrl.signal.aborted;
       const replyText = finalText || (stopped ? "Stopped." : "I couldn't come up with an answer. Please try again.");
       let reply: ChatMessageType = { id: replyId, role: "assistant", content: replyText, timestamp: new Date(), toolId: tool?.id, executionMode: deep ? "deep" : meta.executionMode,
-        ...(deep ? { deep: { stage: finalText ? "done" : "failed", seconds: Math.max(1, Math.round((Date.now() - deepStart) / 1000)) } as const } : {}) };
+        ...(deep ? { deep: { stage: finalText && lastDeep.stage !== "failed" ? "done" : "failed", seconds: Math.max(1, Math.round((Date.now() - deepStart) / 1000)) } as const } : {}) };
       // Research reports become a saved document shown as a compact card (saved once per reply).
       if (meta.output === "document" && finalText) {
         try {
