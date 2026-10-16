@@ -1,0 +1,32 @@
+# VISION app Worker: the full backend (SSR, auth, chat, AI, files, jobs) runs here.
+# The frontend is static assets served by this same Worker; the codebase can also be
+# hosted anywhere else — set AUTH_ORIGIN to the frontend's public origin and add that
+# origin to the auth gateway's ALLOWED_RETURN_ORIGINS (auth-gateway/wrangler.toml).
+name = "vision-app"
+compatibility_date = "2025-09-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+# Build output (run `bun run build` first): server entry + static client assets.
+main = "dist/server/index.js"
+
+[assets]
+directory = "dist/client"
+binding = "ASSETS"
+
+[vars]
+# Public origin of the deployed frontend, e.g. "https://vision.example.com".
+# Used for OAuth callbacks and absolute links; must be in the gateway allowlist.
+AUTH_ORIGIN = ""
+
+# VISION database — reached through this binding when deployed (no API token needed).
+[[d1_databases]]
+binding = "DB"
+database_name = "vision"
+database_id = "ded73090-4d47-45ac-952f-24ae2beaba5f"
+
+# Secrets (set with `wrangler secret put`, never committed):
+#   NVIDIA_API_KEY, GROQ_API_KEY            — AI providers (fallback chain)
+#   CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN — D1 REST fallback + Workers AI REST
+#   MAIL_TOKEN                              — shared token for the gateway's /mail endpoint
+# Optional vars: AUTH_GATEWAY_URL (defaults to the deployed gateway), CLOUDFLARE_ACCOUNT_ID.
