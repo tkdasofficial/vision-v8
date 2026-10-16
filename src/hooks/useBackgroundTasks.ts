@@ -3,6 +3,7 @@ import { supabase } from "@/lib/cloud/client";
 import { useAuth } from "@/context/AuthContext";
 import { runJob } from "@/lib/builder/jobs-client";
 import type { JobView } from "@/lib/builder/statuses";
+import { isTerminal } from "@/lib/builder/statuses";
 
 export type BackgroundTask = {
   id: string;
@@ -12,7 +13,7 @@ export type BackgroundTask = {
   status: string;
   input: any;
   result: any;
-  progress: number;
+  progress: number | null;
   error: string | null;
   created_at: string;
   updated_at: string;
@@ -124,12 +125,12 @@ export function useBackgroundTasks(sessionId?: string | null) {
       const toTask = (job: JobView): BackgroundTask => ({
         id: job.id, user_id: user.id, session_id: sid ?? null, task_type: taskType,
         input, status: job.status, result: job.result, progress: job.progress,
-        error: job.error, created_at: job.created_at, updated_at: job.updated_at,
+        error: job.error, created_at: job.createdAt, updated_at: job.updatedAt,
       });
       const job = await runJob("agent_task", { input: typeof input === "string" ? input : JSON.stringify(input), sessionId: sid }, (current) => {
         const task = toTask(current);
         setTasks((prev) => [...prev.filter((t) => t.id !== task.id), task]);
-        setActiveTasks((prev) => current.status === "completed" || current.status === "failed" || current.status === "cancelled"
+        setActiveTasks((prev) => isTerminal(current.status)
           ? prev.filter((t) => t.id !== task.id) : [...prev.filter((t) => t.id !== task.id), task]);
       });
       return toTask(job);
