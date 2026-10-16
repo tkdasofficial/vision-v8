@@ -7,6 +7,9 @@ export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const { maybeProxyToWorker } = await import("@/lib/cloud/api-proxy.server");
+        const proxied = await maybeProxyToWorker(request);
+        if (proxied) return proxied;
         {
           const { factsFrom, assertSameOrigin } = await import("@/lib/cloud/security.server");
           try { assertSameOrigin(factsFrom(request.headers, null)); } catch (e: any) { return Response.json({ error: e.message }, { status: 403 }); }

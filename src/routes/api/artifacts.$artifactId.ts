@@ -5,7 +5,10 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/api/artifacts/$artifactId")({
   server: {
     handlers: {
-      GET: async ({ params }) => {
+      GET: async ({ request, params }) => {
+        const { maybeProxyToWorker } = await import("@/lib/cloud/api-proxy.server");
+        const proxied = await maybeProxyToWorker(request);
+        if (proxied) return proxied;
         const { artifactResponse } = await import("@/lib/jobs/artifact-download");
         const { getCaller } = await import("@/lib/cloud/auth.server");
         const caller = await getCaller();
