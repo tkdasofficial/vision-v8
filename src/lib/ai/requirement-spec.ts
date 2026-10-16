@@ -33,7 +33,7 @@ const num = (v: string) => (/^\d+$/.test(v) ? Number(v) : WORDNUM[v.toLowerCase(
 const clauseOf = (t: string, i: number) => t.slice(Math.max(t.lastIndexOf(".", i - 1), t.lastIndexOf(";", i - 1), t.lastIndexOf("\n", i - 1)) + 1, i);
 const OPTIONAL = /\b(if possible|would be nice|preferably|ideally|optional(?:ly)?|if you can|nice to have)\b/i;
 const segOf = (t: string, i: number) => { const s = Math.max(t.lastIndexOf(";", i), t.lastIndexOf(".", i), t.lastIndexOf(",", i)) + 1; const e = t.slice(i).search(/[.;\n]/); return t.slice(s, e < 0 ? t.length : i + e); };
-const clean = (s: string) => s.trim().toLowerCase().replace(/^(?:a|an|the|any|some)\s+/, "").replace(/[.,;:!]+$/, "").trim();
+const clean = (s: string) => s.trim().toLowerCase().replace(/^(?:with|having)\s+/, "").replace(/^(?:a|an|the|any|some)\s+/, "").replace(/[.,;:!]+$/, "").trim();
 
 export function buildSpec(text: string, history: ConvMsg[] = []): RequirementSpec {
   const t = normalize(text), low = t.toLowerCase(), reqs: Req[] = [];
@@ -41,7 +41,7 @@ export function buildSpec(text: string, history: ConvMsg[] = []): RequirementSpe
   const a = analyzeRequest(t);
 
   // Quantity: first explicit count, then the latest correction ("actually make it 7") wins.
-  const counts = [...t.matchAll(COUNT_RE)].filter((m) => Number.isFinite(num(m[1])) && num(m[1]) >= 1);
+  const counts = [...t.matchAll(COUNT_RE)].filter((m) => Number.isFinite(num(m[1])) && num(m[1]) >= 1 && !(num(m[1]) === 1 && /^(?:sentence|line)$/.test(sing(m[2])) && /\bin\s*$/i.test(t.slice(Math.max(0, (m.index ?? 0) - 4), m.index))));
   let count = counts[0] ? { n: num(counts[0][1]), noun: sing(counts[0][2]), ev: counts[0][0] } : null;
   const corr = [...t.matchAll(/\b(?:actually|instead|no,?|wait,?|sorry,?)\s+(?:make\s+it|give\s+me|do|use)?\s*(\d{1,4})\b|\bmake\s+it\s+(\d{1,4})\s+instead\b/gi)].pop();
   if (corr && count) count = { ...count, n: Number(corr[1] ?? corr[2]), ev: corr[0] };
@@ -52,7 +52,7 @@ export function buildSpec(text: string, history: ConvMsg[] = []): RequirementSpe
   // Length limits (words / characters) with per-item vs total scope, and impossible ranges.
   const wr = /(?:between\s+)?(\d{1,5})\s*(?:-|–|to|and)\s*(\d{1,5})\s*words?\b/i.exec(t);
   const wmax = /\b(?:under|at most|no more than|max(?:imum)?(?: of)?|up to|within|less than|fewer than)\s*(\d{1,5})\s*words?\b/i.exec(t);
-  const wmin = /\b(?:at least|minimum(?: of)?|no fewer than|more than|over)\s*(\d{1,5})\s*words?\b/i.exec(t);
+  const wmin = /(?<!\bno\s)\b(?:at least|minimum(?: of)?|no fewer than|more than|over)\s*(\d{1,5})\s*words?\b/i.exec(t);
   const scope = (m: RegExpExecArray) => (/\b(each|per|every)\b/i.test(clauseOf(t, m.index) + t.slice(m.index + m[0].length, m.index + m[0].length + 12)) ? "item" : "total");
   let wordsMax: number | null = null;
   if (wr && !/\bseconds?\b/i.test(wr[0])) add("words", `${wr[1]}-${wr[2]}:${scope(wr)}`, wr[0]);
@@ -64,8 +64,9 @@ export function buildSpec(text: string, history: ConvMsg[] = []): RequirementSpe
   // Length preference.
   const short = /\b(brief|briefly|short|shorter|concise|one[- ]sentence|in a sentence|one[- ]line|tl;?dr)\b/i.exec(t.replace(/\bshort\s+(film|video|clip|form)\b/gi, ""));
   const det = /\b(detailed|in[- ]depth|comprehensive|thorough(?:ly)?|step[- ]by[- ]step|elaborate)\b/i.exec(t);
-  if (short && !det) add("length", "short", short[0]);
+  if (short) add("length", "short", short[0]);
   if (det) add("length", "detailed", det[0]);
+  if (short && det && !/\bshort\b[^.]{0,40}\bdetailed\b|\bdetailed\b[^.]{0,40}\bshort\b/i.test(t) && !/\b(?:but|and|yet)\b/i.test(t)) reqs.splice(reqs.findIndex((r) => r.kind === "length" && r.value === "short"), 1);
   if (det && (short || (wordsMax != null && wordsMax < 80 && !reqs.some((r) => r.kind === "words" && r.value.endsWith(":item"))))) add("conflict", "length", det[0]);
 
   // Output format.
@@ -111,7 +112,7 @@ export function buildSpec(text: string, history: ConvMsg[] = []): RequirementSpe
 
   // Required / prohibited elements, verbatim text, preserved parts, edit scope.
   for (const m of t.matchAll(/\b(?:don'?t|do not|never|must not)\s+(?:mention|include|use|add|say)\s+([^.,;\n]+)|\bavoid\s+([^.,;\n]+)|\bwithout\s+([^.,;\n]+)/gi)) {
-    const v = clean(m[1] ?? m[2] ?? m[3]); if (v && v.split(" ").length <= 5) add("exclude", v, m[0]);
+    const v = clean(m[1] ?? m[2] ?? m[3]); if (v && v.split(" ").length <= 5 && !/^(?:headings?|headers?|titles?|section titles?)$/.test(v)) add("exclude", v, m[0]);
   }
   for (const m of t.matchAll(/\binclude\s+(?!this\b|the following\b|exactly\b)([^.,;\n]+)/gi)) for (const p of m[1].split(/\s+and\s+/)) { const v = clean(p); if (v) add("include", v, m[0]); }
   for (const m of t.matchAll(/\b(?:preferably|ideally)\s+([^.,;\n]+)|\bif possible,?\s+with\s+([^.,;\n]+)/gi)) { const v = clean(m[1] ?? m[2]); if (v) add("include", v, m[0], { mandatory: false }); }
@@ -135,7 +136,7 @@ export function buildSpec(text: string, history: ConvMsg[] = []): RequirementSpe
   if (ref.kind === "found") { const o = /\b(first|second|third|fourth|fifth)\b/i.exec(ref.label); add("ref", o ? o[1].toLowerCase() : "previous", ref.label); }
   else if (ref.kind === "ambiguous") add("ambiguous", "reference", ref.label);
   else if (ref.kind === "missing") add("ambiguous", "reference", ref.label);
-  const sameAs = /\b(previous|same)\s+(format|style|structure|layout)\b|\bdo\s+the\s+same\b|\b(?:make|do|fix|improve|redo|change)\s+it\b/i.exec(t);
+  const sameAs = /\b(previous|same)\s+(format|style|structure|layout)\b|\bdo\s+the\s+same\b|\b(?:make|do|fix|improve|redo|change)\s+it\b(?!\s+(?:short|shorter|longer|brief|formal|casual|funny|simple|concise|detailed|\d|one|two|three|four|five|six|seven|eight|nine|ten)\b)/i.exec(t);
   if (sameAs && !reqs.some((r) => r.kind === "ref")) hasAnswer ? add("ref", "previous", sameAs[0]) : add("ambiguous", "reference", sameAs[0]);
   if (/^(?:please\s+)?(?:write|tell me|say)\s+(?:something|anything|stuff)\s+(?:about\s+)?(?:it|this|that)?\.?$/i.test(t)) add("ambiguous", "topic", t);
   if (/^(?:please\s+)?(?:translate|summari[sz]e|rewrite|proofread|shorten)\s+(?:this|that|it)\.?$/i.test(t) && !hasAnswer) add("ambiguous", "missing-input", t);

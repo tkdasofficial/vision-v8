@@ -85,3 +85,27 @@ export const HOLDOUT: BenchCase[] = [
   { id: "h14", cat: "business", text: "Summarise the meeting notes in 2 paragraphs and don't mention names.", expect: ["deliverable:summary", "count:2:paragraph", "exclude:names"] },
   { id: "h15", cat: "technical", text: "Write a Bash script to back up /var/www daily.", expect: ["format:code-bash"] },
 ];
+
+// HOLDOUT2: written in one pass on 2026-10-16 before the upgraded engine was run on them; never tuned against.
+export const HOLDOUT2: BenchCase[] = [
+  { id: "x01", cat: "simple", text: "Give me 4 reasons to learn Rust.", expect: ["count:4:reason"] },
+  { id: "x02", cat: "format", text: "Output the list of users as CSV only.", expect: ["format:csv", "no-commentary"] },
+  { id: "x03", cat: "multi", text: "Write 6 taglines for a coffee shop, each under 10 words, in a humorous tone.", expect: ["count:6:tagline", "words:-10:item", "tone:humorous"] },
+  { id: "x04", cat: "business", text: "Draft a professional email to a client about the delayed shipment. Don't mention the warehouse fire.", expect: ["deliverable:email", "tone:professional", "exclude:warehouse fire"] },
+  { id: "x05", cat: "hinglish", text: "Hindi mein 3 sawal likho about cricket.", expect: ["count:3:question", "lang:hindi"] },
+  { id: "x06", cat: "multilingual", text: "Écris une courte histoire pour les enfants avec un dragon.", expect: ["lang:french~"] },
+  { id: "x07", cat: "typos", text: "writ 5 promts for a sci-fi flim", expect: ["count:5:prompt"] },
+  { id: "x08", cat: "ambiguous", text: "Translate this.", expect: ["ambiguous:missing-input"] },
+  { id: "x09", cat: "contradiction", text: "Give me 3 ideas, no wait, 6.", expect: ["count:6:idea"] },
+  { id: "x10", cat: "contradiction", text: "Make it short but detailed and comprehensive.", expect: ["length:short", "length:detailed", "conflict:length"] },
+  { id: "x11", cat: "context", history: [U("Write a slogan for a gym."), A("Stronger every day.")], text: "Do the same for a bakery.", expect: ["ref:previous"] },
+  { id: "x12", cat: "verbatim", text: "Start the reply exactly with \"Hello world\" and then explain recursion.", expect: ["verbatim:hello world"] },
+  { id: "x13", cat: "optional", text: "Write a product description, preferably with a call to action.", expect: ["include:call to action?"] },
+  { id: "x14", cat: "technical", text: "Write a SQL query that lists orders sorted in descending order of total.", expect: ["format:code-sql", "order:descending"] },
+  { id: "x15", cat: "story", text: "Write 10 scenes of a mystery story, each between 40 and 60 words, with consistent characters.", expect: ["count:10:scene", "deliverable:story", "words:40-60:item", "consistency"] },
+  { id: "x16", cat: "conditional", text: "If the user is under 18, show a warning message.", expect: ["conditional"] },
+  { id: "x17", cat: "format", text: "Answer in a table and keep it under 100 words.", expect: ["format:table", "words:-100:total"] },
+  { id: "x18", cat: "business", text: "Write a formal report on Q3 sales in English, without any headings.", expect: ["deliverable:report", "tone:formal", "lang:english", "no-headings"] },
+  { id: "x19", cat: "creative", text: "Write a funny poem about cats in Spanish.", expect: ["deliverable:poem", "tone:humorous", "lang:spanish"] },
+  { id: "x20", cat: "simple", text: "How does a refrigerator work?", expect: [] },
+];
