@@ -1,5 +1,6 @@
 # Roadmap
-- [ ] Audit and refactor backend transports to the existing Cloudflare Worker; preserve integrations and bindings, verify routing/security/tests, and identify only the remaining Worker configuration step.
+- [x] Audit/refactor backend transports to existing Cloudflare: REST + native RPC, exact CORS/CSRF, binding reuse, preview APIs fail closed; 1214 tests passed, 1 skipped, typecheck/build/Worker bundle OK; isolated workerd session RPC 200, files 401, preflight 204.
+- [ ] Enable and verify the changed handlers on the existing live vision Worker — blocked on owner updating that Worker with the matching app bundle/config; current live preflight returns 405 with no CORS. Live sign-in/AI/Drive and Hindi PDF success remain unverified.
 - [x] Audit and centralize sequential NVIDIA → Groq → Cloudflare text fallback; fix queue/stream capacity leaks, Hindi PDF routing and truthful file stages; 1193 tests passed, 1 skipped, automatic build/typecheck OK; signed-in failure flow and 64px desktop/mobile status checked.
 - [ ] Complete live Hindi PDF creation/download and successful provider-switch verification — blocked: preview NVIDIA/Groq bindings missing; Cloudflare returns 429 quota. No PDF was produced in the live test.
 - [x] Multilingual support (16 locale configs): request understanding, reply-language rule, PDF/DOCX/HTML/CSV/XLSX/EPUB/TXT/MD export. Holdout2 exact 88.8% / F1 96.0%; all 1177 tests, typecheck and build pass. Fonts on the live Cloudflare worker not yet verified.
