@@ -1,0 +1,49 @@
+# Roadmap
+- [x] Match App Drawer opening to Projects: no nested entrances, slide starts only after the panel is built, per-frame updates touch only panel transform + scrim opacity, spring sub-stepped with a 20ms cap. Measured at 4× slower CPU: drawer slide now runs at ~60fps like Projects.
+- [x] Fix attachment-menu Plugins to open an added-plugins square picker immediately above the composer; 19 tests pass and signed-in desktop/mobile checks confirm square placement, scrollable added-plugin list, selection and draft preservation.
+- [x] Make shared content blocks fit short content and cap long content at a square; refine surfaces, borders and clipped-content fade without adding mobile controls. 74 regression tests pass; signed-in mobile/desktop light/dark checks confirm one-word/three-line/square sizing and full-content copying and expansion.
+- [x] Unify Markdown, text and code copy-block UI with top-left format labels; signed-in desktop/mobile chat verifies all three, clean Markdown copying, literal text copying and expanded viewing.
+- [ ] Add App Guide to Help and expand accurate feature/gesture instructions using the shared floating interface; verify guide interactions.
+- [x] Replace Projects Search button with plus and scope pull-down search to Projects; 23 tests pass for routed/overlay gestures, scrolling and filtering. Signed-in browser verification is blocked by the preview session check.
+- [x] Add edge-drag drawer, spring settling and centralized directional navigation/back gestures; 77 tests pass. Chromium touch fixture confirms finger tracking, reverse close, retained draft and one swipe-back call without errors. Signed-in end-to-end verification remains unavailable without a custom-auth session.
+- [x] Add carousel/parallax navigation, smooth windows/menus, hover lift and tap bounce; 66 tests pass, public-page navigation/back/rapid clicks and shared window open/close verified with no browser errors; reduced motion disables bounce and transitions. Signed-in workspace motion remains unverified without a custom-auth session.
+- [x] Separate project/default chats, preserve creation-time ordering on transfers, and show a centered 12-character project name with project-only menu and no Incognito. Signed-in browser verification confirms saved/draft headers and transfers; regression tests pass.
+- [x] Empty chat screen shows only the app logo and the tagline "What can I help you with?"; suggestions, subtitle and pills removed. Test updated and signed-in browser check confirms nothing else between logo and message box.
+- [x] Refine Library, Plugins and Projects with floating controls and dynamic transparency; Projects centered title, back, plus and transforming top search without bottom search. Navigation tests and fixture browser checks pass; signed-in data operations remain unverified.
+- [x] Audit Settings subpages; fix Accessibility icon, distorted toggles with larger tap targets, missing hints/status text, clipped accent choices and password-code spacing. 16 tests pass; actual page layouts checked with local preference fixtures in light/dark, keyboard toggles and scroll fade verified. Signed-in saving remains unverified without a session.
+- [x] Fix Settings back to AppDrawer and every Settings subpage back to main Settings; 13 settings tests pass and browser fixture verifies About → Settings → AppDrawer. Signed-in hosted flow remains unverified.
+- [x] Apply shared floating controls and bounded scroll-responsive transparent headers to all Settings subpages; preserve existing actions. Shared-control browser checks pass; signed-in actions remain unverified without a session.
+- [x] Float the Settings title and back button independently; reuse bounded scroll-responsive transparency with content passing underneath.
+- [x] Center the Settings header title with a top-left back arrow; use independent floating glass buttons throughout the settings directory.
+- [x] Compact Settings spacing, profile and icons; make every action pill-shaped and icon controls circular. Four settings tests pass; desktop/mobile light/dark fixture visual checks pass. Signed-in interactions remain unverified without a session.
+- [x] Rebuild Settings with a horizontal profile section, neutral grouped rows and compact scrolling header; preserve all destinations and actions. 63 tests pass; dark/light and desktop/mobile visual checks pass with fixture profile data. Signed-in page interactions remain unverified without a session.
+- [x] Remove the visible search header band; content scrolls beneath independently floating controls with a subtle scroll-responsive fade. 62 tests pass; desktop/mobile visual checks confirm transparent rest state and fade on scroll using fixture content. Signed-in results remain unverified without a session.
+- [x] Fix search transparency covering results and give each filter its own floating glass surface. Fade bounded to the 144px header in browser checks; 62 tests pass. Signed-in results remain unverified without a session.
+- [x] Make AppDrawer a protected page with an inline search header, filters below it, and a back button returning to navigation. 62 tests pass; desktop/mobile component browser checks confirm header replacement, 12px top gap, filter selection, clearing and back. Signed-in search results remain unverified without a session.
+- [x] Replace sidebars with full-screen AppDrawer and embedded workspace search; floating translucent edges, 12px top gap, no divider. 60 tests pass; component browser checks confirm fullscreen sizing and mobile overflow/scroll/search/close behavior. Signed-in search results remain unverified without a session.
+- [x] Simplify mobile code boxes and full-screen viewers; preserve desktop tools and verify neutral full-screen previews.
+- [x] Upgrade main code viewer and code preview: searchable numbered code, wrap/zoom controls, code/preview/split layouts, device sizes and frame-only reload; 22 tests pass and live HTML viewer controls verified with no page errors. Authenticated project compilation remains unverified without a signed-in session.
+- [x] Advanced chat tables: formatted Markdown tables, sorting, per-table copy and safe CSV downloads; 36 regression tests pass and browser controls verified in the actual chat renderer. Signed-in AI generation remains unverified because no custom-auth session is available.
+- [x] Separate Markdown copy boxes for written prompts, with normal explanations and independent copy controls; verified display and exact clipboard contents in browser, plus 29 tests.
+- [x] Chat agent with backend tools across PRD categories (documents, PDF, data, charts, OCR, audio, QR, security, web, ZIP, code)
+- [x] Video format conversion via GitHub Actions runtime (editing excluded by scope)
+- [x] Image format conversion via GitHub Actions runtime (editing excluded by scope)
+- [x] Barcodes other than QR
+- [ ] Real installs/builds/tests for generated projects — blocked: needs a code sandbox
+- [x] GitHub Actions runtime (Vision-Runtime): image + video format conversion, large-file checksums, live-tested
+- [ ] Publish so the live site gets the runtime + barcodes (needs user)
+- [x] Deep Thinking execution engine (task decomposition, per-task verify/correct, final validation, persistence, real progress) — 15 engine tests + live run verified
+- [x] Persistent app caching (service worker, IndexedDB chat cache, persistent storage request); browser behaviour on the published site not yet verified
+- [x] Old inset sidebar divider removed as part of the requested AppDrawer refinement.
+
+- [x] Gesture flow: Chat swipes (drawer/Projects), drawer pages close to drawer, Projects removed from drawer, first-run tutorial + /guide
+- [x] Drawer pages close to Chat (no reopening recent page); Projects as swipe/tap panel from the right
+- [x] Projects page background uses the app's black (#080808) instead of gray; browser check confirms the computed color matches the app background
+- [x] App Drawer follows a swipe 1:1 with no delay (kept ready off-screen)
+- [x] Universal output accuracy: Nemotron primary + GPT-OSS 120B fallback (also on failed validation), accuracy benchmark; 1041 tests pass.
+- [x] Whole-story plot validator, maths formula rendering, calculation-integrity fixes; regression tests added.
+- [ ] Re-run live long-answer + Bolt story tests after fixes — blocked: Cloudflare Workers AI daily free allocation used up; Nemotron/Groq keys not available to the preview.
+- [ ] French Revolution timeline had 3 wrong dates the fact-checker missed (6-claim budget) — needs timeline-row prioritisation and a live re-run.
+- [x] Story planning required + validated outline, object-state tracking, Hindi foreign-word check, part retry, empty-review fix; 1,108 tests pass.
+- [ ] 10-scene Bolt live test — FAIL after 3/3 attempts (2026-10-15, best ≈92%). Open: false Hindi warning from "Dialogue (Hindi):" label (fixed after attempt 3, not live-verified); "stolen" premise not shown; runs take 9–11 min and the correction round regresses. Needs one fresh live run.
+- [ ] 25-scene Bolt live story test — FAIL after 5/5 live attempts (2026-10-15). Open: core taken twice (sc 12 and 17–18), core sealed in vault sc 22 then in pod sc 24 with no retrieval, plot checker missed both; hidden plan step failed in attempt 5 so the scene outline wasn't used; ~11 min per run. Needs a new test round.
