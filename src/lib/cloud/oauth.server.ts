@@ -9,18 +9,20 @@ import { createUser, randomToken, startSession } from "./auth.server";
 import { oauthLinkMustResetPassword } from "../../../security";
 import { providerCallbackUrl, type OAuthProvider } from "./oauth-urls";
 import { AUTH_GATEWAY_URL, gatewayStartUrl, verifyGatewayAssertion } from "./auth-gateway";
+import { getSecret } from "@/lib/ai/runtime-env.server";
+import { configuredOrigins } from "@/lib/backend-policy";
 
 export type Provider = OAuthProvider;
 const STATE_COOKIE = "vision_oauth_state";
 
-const gateway = () => (process.env["AUTH_GATEWAY_URL"] || AUTH_GATEWAY_URL).replace(/\/+$/, "");
+const gateway = () => (getSecret("AUTH_GATEWAY_URL") || AUTH_GATEWAY_URL).replace(/\/+$/, "");
 const appOrigin = (req: Request) => new URL(req.url).origin;
 
 // Response.redirect() has immutable headers, which breaks the dev server's
 // header merging ("TypeError: immutable") — build redirects manually instead.
 const redirectTo = (url: string) =>
   new Response(null, { status: 302, headers: { Location: url, "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } });
-const back = (req: Request, path: string) => redirectTo(new URL(path, req.url).toString());
+const back = (req: Request, path: string, origin = appOrigin(req)) => redirectTo(new URL(path, origin).toString());
 
 const GATEWAY_ERRORS: Record<string, string> = {
   access_denied: "Sign-in was cancelled.",
@@ -30,8 +32,12 @@ const GATEWAY_ERRORS: Record<string, string> = {
 };
 
 export async function startOAuth(req: Request, p: Provider) {
+  const returnOrigin = new URL(req.url).searchParams.get("return_to") || appOrigin(req);
+  if (returnOrigin !== appOrigin(req) && !configuredOrigins(getSecret("ALLOWED_RETURN_ORIGINS")).includes(returnOrigin)) {
+    return new Response("Return address is not allowed.", { status: 400 });
+  }
   const nonce = randomToken(24);
-  setCookie(STATE_COOKIE, `${p}:${nonce}`, { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 600 });
+  setCookie(STATE_COOKIE, `${p}:${nonce}:${encodeURIComponent(returnOrigin)}`, { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 600 });
   return redirectTo(gatewayStartUrl(gateway(), p, providerCallbackUrl(appOrigin(req), p), nonce));
 }
 
@@ -42,7 +48,11 @@ export async function finishOAuth(req: Request, p: Provider) {
   const err = url.searchParams.get("error");
   if (err) return back(req, "/auth/login?error=" + encodeURIComponent(GATEWAY_ERRORS[err] ?? "Sign-in failed. Please try again."));
   const assertion = url.searchParams.get("assertion");
-  const [savedP, nonce] = (saved ?? "").split(":");
+  const [savedP, nonce, encodedReturn] = (saved ?? "").split(":");
+  const returnOrigin = encodedReturn ? decodeURIComponent(encodedReturn) : appOrigin(req);
+  if (returnOrigin !== appOrigin(req) && !configuredOrigins(getSecret("ALLOWED_RETURN_ORIGINS")).includes(returnOrigin)) {
+    return new Response("Return address is not allowed.", { status: 400 });
+  }
   if (!assertion || savedP !== p || !nonce)
     return back(req, "/auth/login?error=" + encodeURIComponent("Sign-in was cancelled or expired. Please try again."));
   try {
@@ -87,10 +97,12 @@ export async function finishOAuth(req: Request, p: Provider) {
     if (banned) return back(req, "/auth/login?error=" + encodeURIComponent("This account has been suspended."));
     if (newAccount) {
       const S = await import("./security.server");
-      await S.grantWelcomeCredits(userId!, prof.email, S.factsFrom(req.headers, S.ensureDeviceId()));
+      if (!userId) throw new Error("Account creation failed");
+      await S.grantWelcomeCredits(userId, prof.email, S.factsFrom(req.headers, S.ensureDeviceId()));
     }
-    await startSession(userId!);
-    return back(req, "/chat");
+    if (!userId) throw new Error("Account creation failed");
+    await startSession(userId);
+    return back(req, "/chat", returnOrigin);
   } catch (e) {
     console.error("[oauth]", p, (e as Error).message);
     return back(req, "/auth/login?error=" + encodeURIComponent("Sign-in failed. Please try again."));
