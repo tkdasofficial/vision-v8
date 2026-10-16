@@ -64,9 +64,12 @@ function isH3SwallowedErrorBody(body: string): boolean {
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
-      captureWorkerEnv(env);
+      // The nitro Cloudflare preset invokes this entry as fetch(request) and stashes
+      // the Worker env on globalThis.__env__ — use it when env isn't passed through.
+      const effectiveEnv = env ?? (globalThis as any).__env__;
+      captureWorkerEnv(effectiveEnv);
       if (isGatewayRequest(request)) {
-        return await authGateway.fetch(request, env as any);
+        return await authGateway.fetch(request, effectiveEnv as any);
       }
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
