@@ -1,12 +1,21 @@
 // POST /ai/:provider — AI relay. The app (wherever it is hosted) sends an OpenAI-compatible
 // chat body here; this Worker adds the provider key from its own Cloudflare secrets and
-// streams the provider response back. Authorized with the dedicated AI_RELAY_TOKEN (separate from the mail token).
+// streams the provider response back. Callers are authorized by their Origin header against
+// the same ALLOWED_RETURN_ORIGINS allowlist used for sign-in returns. Note: an Origin header
+// can be forged by non-browser clients, so this is weaker than a shared secret.
 //   POST /ai/run  {model, input} — raw Workers AI run (image reading, speech-to-text).
 export interface AiEnv {
-  AI_RELAY_TOKEN?: string;
+  ALLOWED_RETURN_ORIGINS?: string;
   NVIDIA_API_KEY?: string;
   GROQ_API_KEY?: string;
   AI?: { run: (model: string, input: unknown) => Promise<any> };
+}
+
+function originAllowed(req: Request, env: AiEnv): boolean {
+  const origin = (req.headers.get("origin") ?? "").replace(/\/+$/, "");
+  if (!origin) return false;
+  const allowed = (env.ALLOWED_RETURN_ORIGINS || "").split(",").map((s) => s.trim().replace(/\/+$/, "")).filter(Boolean);
+  return allowed.includes(origin);
 }
 
 const UPSTREAM: Record<string, { url: string; key: keyof AiEnv }> = {
@@ -14,20 +23,11 @@ const UPSTREAM: Record<string, { url: string; key: keyof AiEnv }> = {
   groq: { url: "https://api.groq.com/openai/v1/chat/completions", key: "GROQ_API_KEY" },
 };
 
-function safeEqual(a: string, b: string) {
-  if (a.length !== b.length) return false;
-  let d = 0;
-  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return d === 0;
-}
-
 const json = (status: number, error: string) => Response.json({ error }, { status, headers: { "Cache-Control": "no-store" } });
 
 export async function handleAi(req: Request, env: AiEnv, provider: string): Promise<Response> {
   if (req.method !== "POST") return json(405, "Method not allowed");
-  const auth = req.headers.get("authorization") ?? "";
-  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-  if (!env.AI_RELAY_TOKEN || !token || !safeEqual(token, env.AI_RELAY_TOKEN)) return json(401, "unauthorized");
+  if (!originAllowed(req, env)) return json(401, "unauthorized");
   const body: any = await req.json().catch(() => null);
   if (provider === "run") {
     if (!env.AI) return json(503, "not configured");
