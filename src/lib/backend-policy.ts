@@ -6,7 +6,7 @@ export function configuredOrigins(value: string | undefined): string[] {
 }
 
 export function isBackendPath(path: string): boolean {
-  return /^\/(api(?:\/|$)|_serverFn(?:\/|$))/.test(path) || /^\/auth\/(google|github)\/callback$/.test(path);
+  return /^\/(api(?:\/|$)|_serverFn(?:\/|$))/.test(path) || false;
 }
 
 export function allowedBackendOrigin(origin: string | null, requestUrl: string, allowed: string[]): boolean {

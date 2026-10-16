@@ -45,7 +45,8 @@ describe("Worker security and gateway preservation", () => {
   it("allows an exact configured frontend, never lookalike origins", () => {
     expect(allowedBackendOrigin("https://frontend.test", url, configuredOrigins(env.ALLOWED_RETURN_ORIGINS))).toBe(true);
     expect(allowedBackendOrigin("https://frontend.test.evil.test", url, ["https://frontend.test"])).toBe(false);
-    expect(isBackendPath("/auth/google/callback")).toBe(true);
+    expect(isBackendPath("/api/oauth-callback/google")).toBe(true);
+    expect(isBackendPath("/auth/google/callback")).toBe(false);
     expect(isBackendPath("/health")).toBe(false);
   });
   it("answers native RPC preflight without running the app", async () => {

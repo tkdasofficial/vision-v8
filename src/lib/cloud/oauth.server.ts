@@ -7,7 +7,7 @@ import { getCookie, setCookie, deleteCookie } from "@tanstack/react-start/server
 import { d1 } from "./d1.server";
 import { createUser, randomToken, startSession } from "./auth.server";
 import { oauthLinkMustResetPassword } from "../../../security";
-import { providerCallbackUrl, type OAuthProvider } from "./oauth-urls";
+import type { OAuthProvider } from "./oauth-urls";
 import { AUTH_GATEWAY_URL, gatewayStartUrl, verifyGatewayAssertion } from "./auth-gateway";
 import { getSecret } from "@/lib/ai/runtime-env.server";
 import { configuredOrigins } from "@/lib/backend-policy";
@@ -38,7 +38,7 @@ export async function startOAuth(req: Request, p: Provider) {
   }
   const nonce = randomToken(24);
   setCookie(STATE_COOKIE, `${p}:${nonce}:${encodeURIComponent(returnOrigin)}`, { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 600 });
-  return redirectTo(gatewayStartUrl(gateway(), p, providerCallbackUrl(appOrigin(req), p), nonce));
+  return redirectTo(gatewayStartUrl(gateway(), p, `${appOrigin(req)}/api/oauth-callback/${p}`, nonce));
 }
 
 export async function finishOAuth(req: Request, p: Provider) {
