@@ -20,10 +20,12 @@ import { Route as EnterpriseRouteImport } from './routes/enterprise'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as GettingStartedRouteImport } from './routes/getting-started'
 import { Route as GuideRouteImport } from './routes/guide'
+import { Route as HealthRouteImport } from './routes/health'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as IntegrationsRouteImport } from './routes/integrations'
 import { Route as LibraryRouteImport } from './routes/library'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as MailRouteImport } from './routes/mail'
 import { Route as ProspectingRouteImport } from './routes/prospecting'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SearchRouteImport } from './routes/search'
@@ -45,6 +47,7 @@ import { Route as AdminSubscriptionsRouteImport } from './routes/admin.subscript
 import { Route as AdminSupportRouteImport } from './routes/admin.support'
 import { Route as AdminSystemRouteImport } from './routes/admin.system'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as AiProviderRouteImport } from './routes/ai.$provider'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiFilesRouteImport } from './routes/api/files'
 import { Route as ApiJobsRouteImport } from './routes/api/jobs'
@@ -76,6 +79,7 @@ import { Route as LegalTermsRouteImport } from './routes/legal.terms'
 import { Route as ProjectsIndexRouteImport } from './routes/projects.index'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
 import { Route as ProjectsNewRouteImport } from './routes/projects.new'
+import { Route as RuntimeSplatRouteImport } from './routes/runtime.$'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as SettingsAboutRouteImport } from './routes/settings.about'
 import { Route as SettingsAccessibilityRouteImport } from './routes/settings.accessibility'
@@ -94,7 +98,9 @@ import { Route as ApiArtifactsArtifactIdRouteImport } from './routes/api/artifac
 import { Route as ApiJobsJobIdRouteImport } from './routes/api/jobs.$jobId'
 import { Route as ApiOauthProviderRouteImport } from './routes/api/oauth.$provider'
 import { Route as AuthGithubCallbackRouteImport } from './routes/auth.github.callback'
+import { Route as AuthGithubStartRouteImport } from './routes/auth.github.start'
 import { Route as AuthGoogleCallbackRouteImport } from './routes/auth.google.callback'
+import { Route as AuthGoogleStartRouteImport } from './routes/auth.google.start'
 import { Route as SettingsSecurityIndexRouteImport } from './routes/settings.security.index'
 import { Route as SettingsSecurityPasswordRouteImport } from './routes/settings.security.password'
 
@@ -153,6 +159,11 @@ const GuideRoute = GuideRouteImport.update({
   path: '/guide',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HealthRoute = HealthRouteImport.update({
+  id: '/health',
+  path: '/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InboxRoute = InboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
@@ -171,6 +182,11 @@ const LibraryRoute = LibraryRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MailRoute = MailRouteImport.update({
+  id: '/mail',
+  path: '/mail',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProspectingRoute = ProspectingRouteImport.update({
@@ -277,6 +293,11 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
   id: '/users',
   path: '/users',
   getParentRoute: () => AdminRoute,
+} as any)
+const AiProviderRoute = AiProviderRouteImport.update({
+  id: '/ai/$provider',
+  path: '/ai/$provider',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
@@ -434,6 +455,11 @@ const ProjectsNewRoute = ProjectsNewRouteImport.update({
   path: '/projects/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RuntimeSplatRoute = RuntimeSplatRouteImport.update({
+  id: '/runtime/$',
+  path: '/runtime/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -524,9 +550,19 @@ const AuthGithubCallbackRoute = AuthGithubCallbackRouteImport.update({
   path: '/github/callback',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthGithubStartRoute = AuthGithubStartRouteImport.update({
+  id: '/github/start',
+  path: '/github/start',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
   id: '/google/callback',
   path: '/google/callback',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthGoogleStartRoute = AuthGoogleStartRouteImport.update({
+  id: '/google/start',
+  path: '/google/start',
   getParentRoute: () => AuthRoute,
 } as any)
 const SettingsSecurityIndexRoute = SettingsSecurityIndexRouteImport.update({
@@ -553,10 +589,12 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/getting-started': typeof GettingStartedRoute
   '/guide': typeof GuideRoute
+  '/health': typeof HealthRoute
   '/inbox': typeof InboxRoute
   '/integrations': typeof IntegrationsRoute
   '/library': typeof LibraryRoute
   '/login': typeof LoginRoute
+  '/mail': typeof MailRoute
   '/prospecting': typeof ProspectingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
@@ -577,6 +615,7 @@ export interface FileRoutesByFullPath {
   '/admin/support': typeof AdminSupportRoute
   '/admin/system': typeof AdminSystemRoute
   '/admin/users': typeof AdminUsersRoute
+  '/ai/$provider': typeof AiProviderRoute
   '/api/chat': typeof ApiChatRoute
   '/api/files': typeof ApiFilesRoute
   '/api/jobs': typeof ApiJobsRouteWithChildren
@@ -605,6 +644,7 @@ export interface FileRoutesByFullPath {
   '/legal/terms': typeof LegalTermsRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/projects/new': typeof ProjectsNewRoute
+  '/runtime/$': typeof RuntimeSplatRoute
   '/settings/about': typeof SettingsAboutRoute
   '/settings/accessibility': typeof SettingsAccessibilityRoute
   '/settings/ai': typeof SettingsAiRoute
@@ -627,7 +667,9 @@ export interface FileRoutesByFullPath {
   '/api/jobs/$jobId': typeof ApiJobsJobIdRoute
   '/api/oauth/$provider': typeof ApiOauthProviderRoute
   '/auth/github/callback': typeof AuthGithubCallbackRoute
+  '/auth/github/start': typeof AuthGithubStartRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
+  '/auth/google/start': typeof AuthGoogleStartRoute
   '/settings/security/password': typeof SettingsSecurityPasswordRoute
   '/settings/security/': typeof SettingsSecurityIndexRoute
 }
@@ -641,10 +683,12 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/getting-started': typeof GettingStartedRoute
   '/guide': typeof GuideRoute
+  '/health': typeof HealthRoute
   '/inbox': typeof InboxRoute
   '/integrations': typeof IntegrationsRoute
   '/library': typeof LibraryRoute
   '/login': typeof LoginRoute
+  '/mail': typeof MailRoute
   '/prospecting': typeof ProspectingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
@@ -664,6 +708,7 @@ export interface FileRoutesByTo {
   '/admin/support': typeof AdminSupportRoute
   '/admin/system': typeof AdminSystemRoute
   '/admin/users': typeof AdminUsersRoute
+  '/ai/$provider': typeof AiProviderRoute
   '/api/chat': typeof ApiChatRoute
   '/api/files': typeof ApiFilesRoute
   '/api/jobs': typeof ApiJobsRouteWithChildren
@@ -692,6 +737,7 @@ export interface FileRoutesByTo {
   '/legal/terms': typeof LegalTermsRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/projects/new': typeof ProjectsNewRoute
+  '/runtime/$': typeof RuntimeSplatRoute
   '/settings/about': typeof SettingsAboutRoute
   '/settings/accessibility': typeof SettingsAccessibilityRoute
   '/settings/ai': typeof SettingsAiRoute
@@ -714,7 +760,9 @@ export interface FileRoutesByTo {
   '/api/jobs/$jobId': typeof ApiJobsJobIdRoute
   '/api/oauth/$provider': typeof ApiOauthProviderRoute
   '/auth/github/callback': typeof AuthGithubCallbackRoute
+  '/auth/github/start': typeof AuthGithubStartRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
+  '/auth/google/start': typeof AuthGoogleStartRoute
   '/settings/security/password': typeof SettingsSecurityPasswordRoute
   '/settings/security': typeof SettingsSecurityIndexRoute
 }
@@ -731,10 +779,12 @@ export interface FileRoutesById {
   '/forgot-password': typeof ForgotPasswordRoute
   '/getting-started': typeof GettingStartedRoute
   '/guide': typeof GuideRoute
+  '/health': typeof HealthRoute
   '/inbox': typeof InboxRoute
   '/integrations': typeof IntegrationsRoute
   '/library': typeof LibraryRoute
   '/login': typeof LoginRoute
+  '/mail': typeof MailRoute
   '/prospecting': typeof ProspectingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
@@ -755,6 +805,7 @@ export interface FileRoutesById {
   '/admin/support': typeof AdminSupportRoute
   '/admin/system': typeof AdminSystemRoute
   '/admin/users': typeof AdminUsersRoute
+  '/ai/$provider': typeof AiProviderRoute
   '/api/chat': typeof ApiChatRoute
   '/api/files': typeof ApiFilesRoute
   '/api/jobs': typeof ApiJobsRouteWithChildren
@@ -783,6 +834,7 @@ export interface FileRoutesById {
   '/legal/terms': typeof LegalTermsRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/projects/new': typeof ProjectsNewRoute
+  '/runtime/$': typeof RuntimeSplatRoute
   '/settings/about': typeof SettingsAboutRoute
   '/settings/accessibility': typeof SettingsAccessibilityRoute
   '/settings/ai': typeof SettingsAiRoute
@@ -805,7 +857,9 @@ export interface FileRoutesById {
   '/api/jobs/$jobId': typeof ApiJobsJobIdRoute
   '/api/oauth/$provider': typeof ApiOauthProviderRoute
   '/auth/github/callback': typeof AuthGithubCallbackRoute
+  '/auth/github/start': typeof AuthGithubStartRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
+  '/auth/google/start': typeof AuthGoogleStartRoute
   '/settings/security/password': typeof SettingsSecurityPasswordRoute
   '/settings/security/': typeof SettingsSecurityIndexRoute
 }
@@ -823,10 +877,12 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/getting-started'
     | '/guide'
+    | '/health'
     | '/inbox'
     | '/integrations'
     | '/library'
     | '/login'
+    | '/mail'
     | '/prospecting'
     | '/reset-password'
     | '/search'
@@ -847,6 +903,7 @@ export interface FileRouteTypes {
     | '/admin/support'
     | '/admin/system'
     | '/admin/users'
+    | '/ai/$provider'
     | '/api/chat'
     | '/api/files'
     | '/api/jobs'
@@ -875,6 +932,7 @@ export interface FileRouteTypes {
     | '/legal/terms'
     | '/projects/$projectId'
     | '/projects/new'
+    | '/runtime/$'
     | '/settings/about'
     | '/settings/accessibility'
     | '/settings/ai'
@@ -897,7 +955,9 @@ export interface FileRouteTypes {
     | '/api/jobs/$jobId'
     | '/api/oauth/$provider'
     | '/auth/github/callback'
+    | '/auth/github/start'
     | '/auth/google/callback'
+    | '/auth/google/start'
     | '/settings/security/password'
     | '/settings/security/'
   fileRoutesByTo: FileRoutesByTo
@@ -911,10 +971,12 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/getting-started'
     | '/guide'
+    | '/health'
     | '/inbox'
     | '/integrations'
     | '/library'
     | '/login'
+    | '/mail'
     | '/prospecting'
     | '/reset-password'
     | '/search'
@@ -934,6 +996,7 @@ export interface FileRouteTypes {
     | '/admin/support'
     | '/admin/system'
     | '/admin/users'
+    | '/ai/$provider'
     | '/api/chat'
     | '/api/files'
     | '/api/jobs'
@@ -962,6 +1025,7 @@ export interface FileRouteTypes {
     | '/legal/terms'
     | '/projects/$projectId'
     | '/projects/new'
+    | '/runtime/$'
     | '/settings/about'
     | '/settings/accessibility'
     | '/settings/ai'
@@ -984,7 +1048,9 @@ export interface FileRouteTypes {
     | '/api/jobs/$jobId'
     | '/api/oauth/$provider'
     | '/auth/github/callback'
+    | '/auth/github/start'
     | '/auth/google/callback'
+    | '/auth/google/start'
     | '/settings/security/password'
     | '/settings/security'
   id:
@@ -1000,10 +1066,12 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/getting-started'
     | '/guide'
+    | '/health'
     | '/inbox'
     | '/integrations'
     | '/library'
     | '/login'
+    | '/mail'
     | '/prospecting'
     | '/reset-password'
     | '/search'
@@ -1024,6 +1092,7 @@ export interface FileRouteTypes {
     | '/admin/support'
     | '/admin/system'
     | '/admin/users'
+    | '/ai/$provider'
     | '/api/chat'
     | '/api/files'
     | '/api/jobs'
@@ -1052,6 +1121,7 @@ export interface FileRouteTypes {
     | '/legal/terms'
     | '/projects/$projectId'
     | '/projects/new'
+    | '/runtime/$'
     | '/settings/about'
     | '/settings/accessibility'
     | '/settings/ai'
@@ -1074,7 +1144,9 @@ export interface FileRouteTypes {
     | '/api/jobs/$jobId'
     | '/api/oauth/$provider'
     | '/auth/github/callback'
+    | '/auth/github/start'
     | '/auth/google/callback'
+    | '/auth/google/start'
     | '/settings/security/password'
     | '/settings/security/'
   fileRoutesById: FileRoutesById
@@ -1091,10 +1163,12 @@ export interface RootRouteChildren {
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   GettingStartedRoute: typeof GettingStartedRoute
   GuideRoute: typeof GuideRoute
+  HealthRoute: typeof HealthRoute
   InboxRoute: typeof InboxRoute
   IntegrationsRoute: typeof IntegrationsRoute
   LibraryRoute: typeof LibraryRoute
   LoginRoute: typeof LoginRoute
+  MailRoute: typeof MailRoute
   ProspectingRoute: typeof ProspectingRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SearchRoute: typeof SearchRoute
@@ -1102,6 +1176,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   SupportRoute: typeof SupportRoute
   VerifyRoute: typeof VerifyRouteWithChildren
+  AiProviderRoute: typeof AiProviderRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiFilesRoute: typeof ApiFilesRoute
   ApiJobsRoute: typeof ApiJobsRouteWithChildren
@@ -1116,6 +1191,7 @@ export interface RootRouteChildren {
   LegalTermsRoute: typeof LegalTermsRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
   ProjectsNewRoute: typeof ProjectsNewRoute
+  RuntimeSplatRoute: typeof RuntimeSplatRoute
   StudioImagesRoute: typeof StudioImagesRoute
   StudioVideosRoute: typeof StudioVideosRoute
   VideosVideoChatIdRoute: typeof VideosVideoChatIdRoute
@@ -1205,6 +1281,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GuideRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/health': {
+      id: '/health'
+      path: '/health'
+      fullPath: '/health'
+      preLoaderRoute: typeof HealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/inbox': {
       id: '/inbox'
       path: '/inbox'
@@ -1231,6 +1314,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mail': {
+      id: '/mail'
+      path: '/mail'
+      fullPath: '/mail'
+      preLoaderRoute: typeof MailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/prospecting': {
@@ -1379,6 +1469,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/users'
       preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/ai/$provider': {
+      id: '/ai/$provider'
+      path: '/ai/$provider'
+      fullPath: '/ai/$provider'
+      preLoaderRoute: typeof AiProviderRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/chat': {
       id: '/api/chat'
@@ -1597,6 +1694,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/runtime/$': {
+      id: '/runtime/$'
+      path: '/runtime/$'
+      fullPath: '/runtime/$'
+      preLoaderRoute: typeof RuntimeSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings/': {
       id: '/settings/'
       path: '/'
@@ -1723,11 +1827,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthGithubCallbackRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/auth/github/start': {
+      id: '/auth/github/start'
+      path: '/github/start'
+      fullPath: '/auth/github/start'
+      preLoaderRoute: typeof AuthGithubStartRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/auth/google/callback': {
       id: '/auth/google/callback'
       path: '/google/callback'
       fullPath: '/auth/google/callback'
       preLoaderRoute: typeof AuthGoogleCallbackRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/auth/google/start': {
+      id: '/auth/google/start'
+      path: '/google/start'
+      fullPath: '/auth/google/start'
+      preLoaderRoute: typeof AuthGoogleStartRouteImport
       parentRoute: typeof AuthRoute
     }
     '/settings/security/': {
@@ -1802,7 +1920,9 @@ interface AuthRouteChildren {
   AuthSignupRoute: typeof AuthSignupRoute
   AuthVerifyRoute: typeof AuthVerifyRoute
   AuthGithubCallbackRoute: typeof AuthGithubCallbackRoute
+  AuthGithubStartRoute: typeof AuthGithubStartRoute
   AuthGoogleCallbackRoute: typeof AuthGoogleCallbackRoute
+  AuthGoogleStartRoute: typeof AuthGoogleStartRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
@@ -1814,7 +1934,9 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthSignupRoute: AuthSignupRoute,
   AuthVerifyRoute: AuthVerifyRoute,
   AuthGithubCallbackRoute: AuthGithubCallbackRoute,
+  AuthGithubStartRoute: AuthGithubStartRoute,
   AuthGoogleCallbackRoute: AuthGoogleCallbackRoute,
+  AuthGoogleStartRoute: AuthGoogleStartRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
@@ -1917,10 +2039,12 @@ const rootRouteChildren: RootRouteChildren = {
   ForgotPasswordRoute: ForgotPasswordRoute,
   GettingStartedRoute: GettingStartedRoute,
   GuideRoute: GuideRoute,
+  HealthRoute: HealthRoute,
   InboxRoute: InboxRoute,
   IntegrationsRoute: IntegrationsRoute,
   LibraryRoute: LibraryRoute,
   LoginRoute: LoginRoute,
+  MailRoute: MailRoute,
   ProspectingRoute: ProspectingRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SearchRoute: SearchRoute,
@@ -1928,6 +2052,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   SupportRoute: SupportRoute,
   VerifyRoute: VerifyRouteWithChildren,
+  AiProviderRoute: AiProviderRoute,
   ApiChatRoute: ApiChatRoute,
   ApiFilesRoute: ApiFilesRoute,
   ApiJobsRoute: ApiJobsRouteWithChildren,
@@ -1942,6 +2067,7 @@ const rootRouteChildren: RootRouteChildren = {
   LegalTermsRoute: LegalTermsRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRoute,
   ProjectsNewRoute: ProjectsNewRoute,
+  RuntimeSplatRoute: RuntimeSplatRoute,
   StudioImagesRoute: StudioImagesRoute,
   StudioVideosRoute: StudioVideosRoute,
   VideosVideoChatIdRoute: VideosVideoChatIdRoute,

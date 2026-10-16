@@ -35,7 +35,15 @@ const HOP_BY_HOP = new Set(["host", "connection", "content-length", "transfer-en
 export async function maybeProxyToWorker(request: Request): Promise<Response | null> {
   if (isWorkerRuntime()) return null;
   const apiOrigin = getApiOrigin();
-  if (!apiOrigin) return null;
+  // Hard rule: API calls execute on the Cloudflare Worker only. Off-Worker hosting
+  // without API_ORIGIN is a misconfiguration — fail clearly, never run locally.
+  if (!apiOrigin) {
+    console.error("[api-proxy] API_ORIGIN is not set; API calls must run on the Cloudflare Worker");
+    return Response.json(
+      { error: "The backend service is not configured on this host. Please try again shortly." },
+      { status: 503 },
+    );
+  }
 
   const { factsFrom, assertSameOrigin } = await import("@/lib/cloud/security.server");
   try {

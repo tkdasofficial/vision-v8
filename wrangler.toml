@@ -1,8 +1,11 @@
-# VISION app Worker: the full backend (SSR, auth, chat, AI, files, jobs) runs here.
-# The frontend is static assets served by this same Worker; the codebase can also be
-# hosted anywhere else — set AUTH_ORIGIN to the frontend's public origin and add that
-# origin to the auth gateway's ALLOWED_RETURN_ORIGINS (auth-gateway/wrangler.toml).
-name = "vision-app"
+# VISION Worker "vision" — the ONLY backend. The full app (SSR, server functions,
+# /api/* routes) plus the auth-gateway endpoints (OAuth start/callback, /mail,
+# /ai/* relay, /runtime/*, /health, JWKS) all run here. The frontend may be hosted
+# anywhere: set AUTH_ORIGIN to its public origin, add that origin to
+# ALLOWED_RETURN_ORIGINS below, and set API_ORIGIN on the hosting side to this
+# Worker's URL so every /api/* call is forwarded here. API calls never execute
+# on the frontend's hosting environment.
+name = "vision"
 compatibility_date = "2025-09-01"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
@@ -16,11 +19,14 @@ binding = "ASSETS"
 
 [vars]
 # Public origin of the deployed frontend, e.g. "https://vision.example.com".
-# Used for OAuth callbacks and absolute links; must be in the gateway allowlist.
+# Used for OAuth callbacks and absolute links; must be in ALLOWED_RETURN_ORIGINS.
 AUTH_ORIGIN = ""
+# Exact origins the gateway may send users back to, and the only origins whose
+# /ai relay calls are accepted (comma-separated).
+ALLOWED_RETURN_ORIGINS = "https://id-preview--b9303adb-64e8-4985-a8e5-43de9ac3bbd4.lovable.app,https://project--b9303adb-64e8-4985-a8e5-43de9ac3bbd4-dev.lovable.app,https://project--b9303adb-64e8-4985-a8e5-43de9ac3bbd4.lovable.app,https://b9303adb-64e8-4985-a8e5-43de9ac3bbd4.lovableproject.com,http://localhost:8080"
 
 # Workers AI binding — the primary path for the Cloudflare model (no API token,
-# no REST quota). providers.server.ts falls back to the REST endpoint off-Worker.
+# no REST quota). providers.server.ts relays to this Worker's /ai endpoint off-Worker.
 [ai]
 binding = "AI"
 
@@ -30,8 +36,21 @@ binding = "DB"
 database_name = "vision"
 database_id = "ded73090-4d47-45ac-952f-24ae2beaba5f"
 
-# Secrets (set with `wrangler secret put`, never committed):
-#   NVIDIA_API_KEY, GROQ_API_KEY            — AI providers (fallback chain)
-#   CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN — D1 REST fallback + Workers AI REST
-#   MAIL_TOKEN                              — shared token for the gateway's /mail endpoint
-# Optional vars: AUTH_GATEWAY_URL (defaults to the deployed gateway), CLOUDFLARE_ACCOUNT_ID.
+# Gmail SMTP credentials from the account Secrets Store (used by POST /mail).
+[[secrets_store_secrets]]
+binding = "SMTP_EMAIL"
+store_id = "b4394e5cddb24a46b6984c69ce02b8b6"
+secret_name = "SMTP_EMAIL"
+
+[[secrets_store_secrets]]
+binding = "SMTP_PASSWORD"
+store_id = "b4394e5cddb24a46b6984c69ce02b8b6"
+secret_name = "SMTP_PASSWORD"
+
+# Secrets (already set on the "vision" Worker, never committed):
+#   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
+#   STATE_KEY, SIGNING_KEY                    — OAuth state sealing + assertion signing
+#   NVIDIA_API_KEY, GROQ_API_KEY              — AI providers (fallback chain)
+#   MAIL_TOKEN                                — shared token for the /mail endpoint
+#   CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN — D1 REST fallback (off-Worker dev)
+# Deploy only with: npx wrangler deploy -c wrangler.toml  (from the project root)
