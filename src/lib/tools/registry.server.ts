@@ -106,7 +106,7 @@ export async function markdownToPdf(title: string, md: string, fetcher?: typeof 
     const h = raw.match(/^(#{1,3})\s+(.*)/);
     const plain = (s: string) => s.replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1").replace(/`([^`]+)`/g, "$1").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
     if (h) { y -= 6; line(plain(h[2]), "bold", [20, 15, 13][h[1].length - 1]); y -= 2; }
-    else if (/^\s*[-*]\s+/.test(raw)) { const b = plain(raw.replace(/^\s*[-*]\s+/, "")); line(kit.isRtl(b) ? b + " •" : "• " + b, "regular", 11, 12); }
+    else if (/^\s*[-*]\s+/.test(raw)) { const b = plain(raw.replace(/^\s*[-*]\s+/, "")); line("• " + b, "regular", 11, 12); }
     else if (/^\s*\|/.test(raw)) { if (!/^\s*\|[\s:|-]+\|\s*$/.test(raw)) line(raw.split("|").filter((c, i, a) => i && i < a.length - 1).map((c) => plain(c.trim())).join("   |   "), "regular", 10); }
     else if (!raw.trim()) y -= 6;
     else line(plain(raw));

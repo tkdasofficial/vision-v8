@@ -26,7 +26,7 @@ describe("multilingual file export", () => {
         if (fmt === "html") { expect(t).toMatch(new RegExp(`lang="${id}"`)); if (id === "ar" || id === "ur") expect(t).toContain('dir="rtl"'); }
       }
       const d = await buildDocument("docx", s.title, md); keep(`${id}.docx`, d.bytes);
-      const xml = strFromU8(unzipSync(d.bytes)["word/document.xml"]);
+      const xml = strFromU8(unzipSync(d.bytes)["word/document.xml"]).replace(/&apos;/g, "'");
       expect(xml).toContain(s.text);
       if (id === "ar" || id === "ur") expect(xml).toContain("<w:bidi");
       const e = await buildDocument("epub", s.title, md);
