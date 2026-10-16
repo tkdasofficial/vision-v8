@@ -11,7 +11,7 @@ const WORKER = "https://vision-app.example.workers.dev";
 function req(path: string, init: RequestInit = {}) {
   return new Request(`http://localhost${path}`, {
     ...init,
-    headers: { origin: "http://localhost", cookie: "vision_session=abc123", ...(init.headers ?? {}) },
+    headers: { origin: "http://localhost", "sec-fetch-site": "same-origin", cookie: "vision_session=abc123", ...(init.headers ?? {}) },
   });
 }
 
