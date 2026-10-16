@@ -1,9 +1,10 @@
+import { getSecret } from "@/lib/ai/runtime-env.server";
 // Private artifact storage: Google Drive when configured, otherwise chunked rows in D1.
 // Keys are opaque; "d1:" prefixed keys live in artifact_chunks.
 import { d1 } from "@/lib/cloud/d1.server";
 
 const CHUNK = 700_000; // bytes per row before base64 (keeps rows well under D1 limits)
-const driveReady = () => ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REFRESH_TOKEN", "GOOGLE_DRIVE_FOLDER_ID"].every((k) => !!process.env[k]);
+const driveReady = () => ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REFRESH_TOKEN", "GOOGLE_DRIVE_FOLDER_ID"].every((k) => !!getSecret(k));
 
 function b64(bytes: Uint8Array) { let s = ""; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000)); return btoa(s); }
 function unb64(s: string) { const bin = atob(s); const out = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; }

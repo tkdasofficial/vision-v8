@@ -3,6 +3,7 @@ import "./lib/error-capture";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { captureWorkerEnv } from "./lib/ai/runtime-env.server";
+import { isBackendPath } from "./lib/backend-policy";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -48,6 +49,10 @@ function isH3SwallowedErrorBody(body: string): boolean {
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const bindings = env && typeof env === "object" ? env as Record<string, unknown> : {};
+      if (isBackendPath(new URL(request.url).pathname) && bindings.VISION_BACKEND_RUNTIME !== "cloudflare") {
+        return Response.json({ error: "Use the configured Cloudflare API endpoint." }, { status: 503 });
+      }
       captureWorkerEnv(env);
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);

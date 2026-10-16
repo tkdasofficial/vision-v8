@@ -1,9 +1,11 @@
 name = "vision"
-main = "src/index.ts"
+main = "../cloudflare.entry.ts"
 compatibility_date = "2025-09-01"
+compatibility_flags = ["nodejs_compat", "nodejs_compat_populate_process_env"]
 workers_dev = true
 
 [vars]
+VISION_BACKEND_RUNTIME = "cloudflare"
 # Exact origins the gateway may send users back to (comma-separated).
 ALLOWED_RETURN_ORIGINS = "https://id-preview--b9303adb-64e8-4985-a8e5-43de9ac3bbd4.lovable.app,https://project--b9303adb-64e8-4985-a8e5-43de9ac3bbd4-dev.lovable.app,https://project--b9303adb-64e8-4985-a8e5-43de9ac3bbd4.lovable.app,https://b9303adb-64e8-4985-a8e5-43de9ac3bbd4.lovableproject.com,http://localhost:8080"
 
@@ -23,7 +25,7 @@ store_id = "b4394e5cddb24a46b6984c69ce02b8b6"
 secret_name = "SMTP_PASSWORD"
 # MAIL_TOKEN: Worker secret shared with the app (app env MAIL_TOKEN).
 
-# VISION database: used only by the /runtime relay for GitHub Actions jobs.
+# Existing VISION database: shared by application handlers and runtime relay.
 [[d1_databases]]
 binding = "DB"
 database_name = "vision"
