@@ -66,7 +66,7 @@ export default {
     try {
       captureWorkerEnv(env);
       if (isGatewayRequest(request)) {
-        return await authGateway.fetch(request, env as any, ctx as any);
+        return await authGateway.fetch(request, env as any);
       }
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
