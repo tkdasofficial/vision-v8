@@ -3,6 +3,8 @@ import { TEXT_CHAIN } from "@/lib/ai/models.server";
 import { failureCategory } from "@/lib/ai/providers.server";
 import { captureWorkerEnv, getSecret, providerConfigReport } from "@/lib/ai/runtime-env.server";
 import { PLANNING, complete } from "@/lib/jobs/llm.server";
+import { ALL_PROVIDERS_UNAVAILABLE } from "@/lib/ai/orchestrator.server";
+import { limiter } from "@/lib/ai/rate-limiter";
 
 const sse = (t: string) => new Response(`data: {"choices":[{"delta":{"content":"${t}"}}]}\n\ndata: [DONE]\n\n`, { status: 200 });
 const host = (u: unknown) => new URL(String(u)).host;
@@ -10,7 +12,9 @@ const host = (u: unknown) => new URL(String(u)).host;
 describe("provider priority", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.spyOn(globalThis, "setTimeout").mockImplementation(((f: any) => { f(); return 0 as any; }) as any);
+    const timer = globalThis.setTimeout;
+    vi.spyOn(globalThis, "setTimeout").mockImplementation(((f: any, ms: number) => timer(f, ms < 4000 ? 0 : ms)) as any);
+    limiter.reset();
     delete process.env.NVIDIA_API_KEY; delete process.env.GROQ_API_KEY;
     captureWorkerEnv({ NVIDIA_API_KEY: "n", GROQ_API_KEY: "g" });
     process.env.CLOUDFLARE_ACCOUNT_ID = "a"; process.env.CLOUDFLARE_API_TOKEN = "c";
@@ -46,7 +50,7 @@ describe("provider priority", () => {
       .mockImplementation(async (u) => host(u) === "api.cloudflare.com" ? sse("CF") : host(u) === "api.groq.com" ? new Response("data: nonsense\n\n", { status: 200 }) : Promise.reject(new Error("timeout")));
     const r = await complete("s", "u", { models: TEXT_CHAIN });
     expect(r.model).toMatch(/Cloudflare/);
-    expect(f.mock.calls.at(-1)![0]).toMatch(/api\.cloudflare\.com/);
+    expect(f.mock.calls.at(-1)?.[0]).toMatch(/api\.cloudflare\.com/);
   });
 
   it("missing bindings skip the provider without a network call", async () => {
@@ -58,7 +62,7 @@ describe("provider priority", () => {
 
   it("all fail → truthful error with no secret", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("no", { status: 403 }));
-    await expect(complete("s", "u", { models: TEXT_CHAIN })).rejects.toThrow(/^AI (couldn.t answer|is busy)/);
+    await expect(complete("s", "u", { models: TEXT_CHAIN })).rejects.toThrow(ALL_PROVIDERS_UNAVAILABLE);
   });
 
   it("categorises failures", () => {

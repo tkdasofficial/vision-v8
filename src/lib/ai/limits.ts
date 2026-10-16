@@ -12,6 +12,8 @@ export const AI_LIMITS = {
   retry: { attempts: 2, baseMs: 400, maxMs: 4_000 },
   /** Time allowed until a provider starts streaming; every model call uses it. */
   connectMs: 30_000,
+  /** Budget for transport retries and sequential fallback for one generation call. */
+  providerChainMs: 120_000,
   /**
    * Outer retries for callers that wrap streamFromProvider (Deep engine). Transport failures are already
    * retried inside the provider layer, so the outer loop adds at most this many attempts (mainly for empty

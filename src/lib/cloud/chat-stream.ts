@@ -42,13 +42,15 @@ export async function streamChat(
       if (!line.startsWith("data: ")) continue;
       const json = line.slice(6).trim();
       if (json === "[DONE]") continue;
-      try {
-        const p = JSON.parse(json);
+      let p: any;
+      try { p = JSON.parse(json); } catch { continue; }
+      if (p.vision_error) throw new Error(p.vision_error.message || "The request failed.");
+      {
         if (p.vision_task) { const ev = parseTaskEvent(p.vision_task); if (ev) opts.onTask?.(ev); continue; }
         if (p.vision_status) { opts.onStatus?.(String(p.vision_status.stage), p.vision_status.detail ? String(p.vision_status.detail) : undefined); continue; }
         const delta = p.choices?.[0]?.delta?.content ?? p.response;
         if (delta) { text += delta; onText(text); }
-      } catch { /* partial line */ }
+      }
     }
   }
   // Some models wrap private reasoning in <think> tags; never show it.

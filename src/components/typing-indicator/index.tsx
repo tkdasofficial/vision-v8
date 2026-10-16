@@ -36,14 +36,14 @@ const TypingIndicator = forwardRef<HTMLDivElement, Props>(({ phase = "thinking",
   const dotStr = ".".repeat(dots);
 
   return (
-    <div ref={ref} role="status" aria-live="polite" className="mx-auto flex max-w-2xl flex-col gap-0.5 px-4 py-3 animate-fade-in">
+    <div ref={ref} role="status" aria-live="polite" className="mx-auto flex h-16 w-full max-w-2xl flex-col justify-center gap-0.5 rounded-lg px-4 animate-fade-in">
       <span className="flex items-center gap-2 text-sm font-medium text-foreground">
         <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-primary" aria-hidden />
         <span key={label} className="animate-fade-in">{label}<span className="text-muted-foreground">{dotStr}</span></span>
       </span>
       {(detail || (done && done.length > 0)) && (
         <span className="truncate pl-3.5 text-xs text-muted-foreground">
-          {detail || done!.slice(-3).map((s) => s.replace(/_/g, " ")).join(" · ")}
+          {detail || done?.slice(-3).map((s) => s.replace(/_/g, " ")).join(" · ")}
         </span>
       )}
     </div>

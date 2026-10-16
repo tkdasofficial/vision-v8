@@ -394,6 +394,7 @@ const DEEP_LABELS: Record<DeepStage, string> = {
   crafting: "Preparing final response", done: "Done", failed: "Couldn't finish",
   planning: "Preparing execution plan", generating: "Generating individual tasks", verifying: "Verifying results",
   correcting: "Correcting identified issues", validating: "Running final validation",
+  retrying: "Retrying", switching_provider: "Switching AI provider",
 };
 
 const DeepStatusCard = ({ stage, seconds, since, detail }: { stage: DeepStage; seconds?: number; since: Date; detail?: string }) => {
@@ -409,11 +410,11 @@ const DeepStatusCard = ({ stage, seconds, since, detail }: { stage: DeepStage; s
   }, [live, since]);
   const secs = live ? elapsed : seconds;
   return (
-    <div role="status" aria-live="polite" className="flex h-8 w-full items-center gap-2 rounded-lg border border-border bg-muted/60 px-3 text-xs">
+    <div role="status" aria-live="polite" className="flex h-16 w-full items-center gap-2 rounded-lg border border-border bg-muted/60 px-3 text-xs">
       {live ? <Loader2 className="size-3.5 shrink-0 animate-spin text-primary" />
         : stage === "done" ? <Check className="size-3.5 shrink-0 text-primary" />
         : <AlertCircle className="size-3.5 shrink-0 text-destructive" />}
-      <span key={stage} className="truncate font-medium text-foreground animate-fade-in">
+      <span key={stage} className="min-w-0 break-words font-medium text-foreground animate-fade-in">
         {DEEP_LABELS[stage]}{live && detail ? ` · ${detail}` : ""}{live ? "…" : stage === "done" && secs ? ` · thought for ${secs}s` : ""}
       </span>
       {live && secs !== undefined && <span className="ml-auto shrink-0 tabular-nums text-muted-foreground">{secs}s</span>}

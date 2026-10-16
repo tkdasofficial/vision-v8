@@ -10,7 +10,7 @@ import { detectLocale, localeById } from "@/lib/i18n/locales";
 
 export type WorkFile = { name: string; mime: string; bytes: Uint8Array };
 export type ToolOut = { table?: unknown[][]; text?: string; data?: unknown; files?: WorkFile[]; preview?: { kind: "svg" | "markdown"; content: string } };
-export type ToolCtx = { files: WorkFile[]; lastText: string; lastTable?: unknown[][]; complete: (system: string, user: string, maxTokens?: number) => Promise<string>; note: (d: string) => Promise<void> };
+export type ToolCtx = { files: WorkFile[]; lastText: string; lastTable?: unknown[][]; complete: (system: string, user: string, maxTokens?: number) => Promise<string>; note: (d: string) => Promise<void>; stage?: (stage: "writing_content" | "creating_document" | "converting_file", detail: string) => Promise<void> };
 export type Tool = { id: string; category: string; desc: string; params: string; run: (c: ToolCtx, p: any) => Promise<ToolOut> };
 
 const MAX_TEXT = 400_000;
@@ -233,6 +233,7 @@ export const TOOLS: Tool[] = [
     const fmt = String(p?.format || "md").toLowerCase();
     if (p?.verbatim && c.lastText && !/xlsx|csv|excel/.test(fmt)) {
       const title = p?.title || c.lastText.match(/^#\s+(.*)/m)?.[1] || "Document";
+      await c.stage?.("creating_document", `Creating ${fmt.toUpperCase()}`);
       const file = await buildDocument(fmt, title, c.lastText);
       return { text: `Saved the previous result as ${fmt.toUpperCase()}.${pdfNote(fmt, file)}`, files: [file] };
     }
@@ -240,19 +241,23 @@ export const TOOLS: Tool[] = [
       // Real data is available: write it as-is instead of letting the AI retype (and possibly invent) numbers.
       const rows = c.lastTable ?? await tableOf(c, {});
       const title = p?.title || "data";
+      await c.stage?.("creating_document", `Creating ${fmt.toUpperCase()}`);
       const file = fmt === "csv" ? txt(`${P.slugify(title) || "data"}.csv`, P.toCsv(rows), "text/csv") : { name: `${P.slugify(title) || "data"}.xlsx`, mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", bytes: writeXlsx([{ name: title.slice(0, 31), rows }]) };
       return { text: `Saved ${rows.length - 1} data rows to ${file.name}.`, files: [file], table: rows };
     }
     const src = p?.use_previous !== false && c.lastText ? `\n\nSource material:\n${c.lastText.slice(0, 30000)}` : "";
+    await c.stage?.("writing_content", "Writing document content");
     const md = clean(await c.complete(`You write complete, polished documents in Markdown. Use # headings, lists and Markdown tables where useful.${/xlsx|csv|excel/.test(fmt) ? " The document MUST be a single Markdown table with a header row containing all data." : ""} Output only the document.`, `${p?.request || "Write the document."}${src}`, 6000));
     if (!md) throw new Error("The writer returned nothing.");
     const title = p?.title || md.match(/^#\s+(.*)/m)?.[1] || "Document";
+    await c.stage?.("creating_document", `Creating ${fmt.toUpperCase()}`);
     const file = await buildDocument(fmt, title, md);
     return { text: md.slice(0, 20000) + pdfNote(fmt, file), files: [file], preview: { kind: "markdown", content: md.slice(0, 20000) } };
   } },
   { id: "convert_document", category: "File conversion", desc: "Convert a document between formats keeping its text: PDF/Word/HTML/Markdown/text/Excel/CSV → pdf, docx, html, md, txt, epub; images → pdf", params: '{"to": "pdf"|"docx"|"html"|"md"|"txt"|"epub"|"xlsx"|"csv", "file"?: string}', run: async (c, p) => {
     const to = String(p?.to || "").toLowerCase().replace("word", "docx");
     if (!to) throw new Error("Which format should I convert to?");
+    await c.stage?.("converting_file", `Converting to ${to.toUpperCase()}`);
     const imgs = many(c, ["image"]).filter((f) => /png|jpe?g/.test(P.sniffType(f.bytes)?.ext ?? ""));
     if (to === "pdf" && imgs.length && imgs.length === c.files.length) {
       const doc = await PDFDocument.create();

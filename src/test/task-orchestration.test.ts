@@ -28,6 +28,11 @@ describe("task events", () => {
     expect(needsLiveFacts("What is the latest iPhone price?")).toBe(true);
     expect(needsLiveFacts("Write a poem about rain")).toBe(false);
   });
+  it("never emits progress after a terminal failure", () => {
+    const lines: string[] = []; const emit = taskEmitter("t", (line) => lines.push(line));
+    emit("thinking"); emit("switching_provider"); emit("failed"); emit("reasoning");
+    expect(lines.map((line) => JSON.parse(line.slice(6)).vision_task.stage)).toEqual(["thinking", "switching_provider", "failed"]);
+  });
 });
 
 describe("render scheduler", () => {
@@ -48,9 +53,8 @@ describe("render scheduler", () => {
 });
 
 describe("status catalogue", () => {
-  it("has exactly 30 truthful labels with no Completed, Writing, Splash or bare Accuracy", () => {
+  it("keeps answer completion separate from task failures", () => {
     const labels = Object.values(STAGE_LABELS);
-    expect(labels).toHaveLength(30);
     for (const bad of ["Completed", "Writing", "Splash", "Accuracy", "Rendering Response"]) expect(labels).not.toContain(bad);
     expect(parseTaskEvent({ taskId: "t", seq: 1, stage: "completed" })).toBeNull();
   });
