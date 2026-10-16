@@ -3,7 +3,7 @@ import "./lib/error-capture";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { captureWorkerEnv } from "./lib/ai/runtime-env.server";
-import { isBackendPath } from "./lib/backend-policy";
+import { isBackendPath, isAppCallbackPath } from "./lib/backend-policy";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -53,7 +53,8 @@ export default {
       const runtime = (request as Request & { runtime?: { cloudflare?: { env?: unknown } } }).runtime;
       const actualEnv = runtime?.cloudflare?.env ?? env;
       const bindings = actualEnv && typeof actualEnv === "object" ? actualEnv as Record<string, unknown> : {};
-      if (isBackendPath(new URL(request.url).pathname) && bindings.VISION_BACKEND_RUNTIME !== "cloudflare") {
+      const path = new URL(request.url).pathname;
+      if ((isBackendPath(path) || isAppCallbackPath(path)) && bindings.VISION_BACKEND_RUNTIME !== "cloudflare") {
         return Response.json({ error: "Use the configured Cloudflare API endpoint." }, { status: 503 });
       }
       captureWorkerEnv(actualEnv);

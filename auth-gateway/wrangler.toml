@@ -7,7 +7,7 @@ workers_dev = true
 [vars]
 VISION_BACKEND_RUNTIME = "cloudflare"
 # Exact origins the gateway may send users back to (comma-separated).
-ALLOWED_RETURN_ORIGINS = "https://id-preview--b9303adb-64e8-4985-a8e5-43de9ac3bbd4.lovable.app,https://project--b9303adb-64e8-4985-a8e5-43de9ac3bbd4-dev.lovable.app,https://project--b9303adb-64e8-4985-a8e5-43de9ac3bbd4.lovable.app,https://b9303adb-64e8-4985-a8e5-43de9ac3bbd4.lovableproject.com,http://localhost:8080"
+ALLOWED_RETURN_ORIGINS = "https://vision.tusharkantidasofficial.workers.dev,https://id-preview--b9303adb-64e8-4985-a8e5-43de9ac3bbd4.lovable.app,https://project--b9303adb-64e8-4985-a8e5-43de9ac3bbd4-dev.lovable.app,https://project--b9303adb-64e8-4985-a8e5-43de9ac3bbd4.lovable.app,https://b9303adb-64e8-4985-a8e5-43de9ac3bbd4.lovableproject.com,http://localhost:8080"
 
 # Secrets (set with `wrangler secret put`, never committed):
 # GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET,

@@ -46,15 +46,17 @@ export async function finishOAuth(req: Request, p: Provider) {
   const saved = getCookie(STATE_COOKIE);
   deleteCookie(STATE_COOKIE, { path: "/" });
   const err = url.searchParams.get("error");
-  if (err) return back(req, "/auth/login?error=" + encodeURIComponent(GATEWAY_ERRORS[err] ?? "Sign-in failed. Please try again."));
   const assertion = url.searchParams.get("assertion");
   const [savedP, nonce, encodedReturn] = (saved ?? "").split(":");
-  const returnOrigin = encodedReturn ? decodeURIComponent(encodedReturn) : appOrigin(req);
+  let returnOrigin = appOrigin(req);
+  try { if (encodedReturn) returnOrigin = decodeURIComponent(encodedReturn); }
+  catch { return new Response("Invalid sign-in state.", { status: 400 }); }
   if (returnOrigin !== appOrigin(req) && !configuredOrigins(getSecret("ALLOWED_RETURN_ORIGINS")).includes(returnOrigin)) {
     return new Response("Return address is not allowed.", { status: 400 });
   }
+  if (err) return back(req, "/auth/login?error=" + encodeURIComponent(GATEWAY_ERRORS[err] ?? "Sign-in failed. Please try again."), returnOrigin);
   if (!assertion || savedP !== p || !nonce)
-    return back(req, "/auth/login?error=" + encodeURIComponent("Sign-in was cancelled or expired. Please try again."));
+    return back(req, "/auth/login?error=" + encodeURIComponent("Sign-in was cancelled or expired. Please try again."), returnOrigin);
   try {
     const claims = await verifyGatewayAssertion(assertion, { issuer: gateway(), audience: appOrigin(req), provider: p, nonce });
     // Single use: a replayed assertion is rejected.
@@ -94,7 +96,7 @@ export async function finishOAuth(req: Request, p: Provider) {
     // Provider-verified email — no code needed.
     await d1("UPDATE auth_users SET email_verified = 1 WHERE id = ?", [userId]);
     const banned = (await d1<{ is_banned: number }>("SELECT is_banned FROM profiles WHERE id = ?", [userId]))[0]?.is_banned;
-    if (banned) return back(req, "/auth/login?error=" + encodeURIComponent("This account has been suspended."));
+    if (banned) return back(req, "/auth/login?error=" + encodeURIComponent("This account has been suspended."), returnOrigin);
     if (newAccount) {
       const S = await import("./security.server");
       if (!userId) throw new Error("Account creation failed");
@@ -105,6 +107,6 @@ export async function finishOAuth(req: Request, p: Provider) {
     return back(req, "/chat", returnOrigin);
   } catch (e) {
     console.error("[oauth]", p, (e as Error).message);
-    return back(req, "/auth/login?error=" + encodeURIComponent("Sign-in failed. Please try again."));
+    return back(req, "/auth/login?error=" + encodeURIComponent("Sign-in failed. Please try again."), returnOrigin);
   }
 }

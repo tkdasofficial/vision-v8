@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { backendFetch, backendUrl, normalizeBackendUrl } from "@/lib/backend";
-import { allowedBackendOrigin, configuredOrigins, isBackendPath } from "@/lib/backend-policy";
+import { allowedBackendOrigin, configuredOrigins, isBackendPath, isAppCallbackPath } from "@/lib/backend-policy";
 import { createCloudflareBoundary } from "@/lib/cloud/worker-boundary";
 import { captureWorkerEnv } from "@/lib/ai/runtime-env.server";
 import { d1 } from "@/lib/cloud/d1.server";
@@ -53,6 +53,8 @@ describe("Worker security and gateway preservation", () => {
     expect(allowedBackendOrigin("https://frontend.test.evil.test", url, ["https://frontend.test"])).toBe(false);
     expect(isBackendPath("/api/oauth-callback/google")).toBe(true);
     expect(isBackendPath("/auth/google/callback")).toBe(false);
+    expect(isAppCallbackPath("/auth/google/callback")).toBe(true);
+    expect(isAppCallbackPath("/github/callback")).toBe(true);
     expect(isBackendPath("/health")).toBe(false);
   });
   it("answers native RPC preflight without running the app", async () => {
