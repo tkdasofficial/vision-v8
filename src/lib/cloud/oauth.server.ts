@@ -9,12 +9,16 @@ import { createUser, randomToken, startSession } from "./auth.server";
 import { oauthLinkMustResetPassword } from "../../../security";
 import { providerCallbackUrl, type OAuthProvider } from "./oauth-urls";
 import { AUTH_GATEWAY_URL, gatewayStartUrl, verifyGatewayAssertion } from "./auth-gateway";
+import { getSecret } from "../ai/runtime-env.server";
 
 export type Provider = OAuthProvider;
 const STATE_COOKIE = "vision_oauth_state";
 
 const gateway = () => (process.env["AUTH_GATEWAY_URL"] || AUTH_GATEWAY_URL).replace(/\/+$/, "");
-const appOrigin = (req: Request) => new URL(req.url).origin;
+// The public origin of this app. Set AUTH_ORIGIN (Worker var/secret) to host the frontend
+// anywhere; without it the request's own origin is used. The origin must be listed in the
+// auth gateway's ALLOWED_RETURN_ORIGINS.
+const appOrigin = (req: Request) => (getSecret("AUTH_ORIGIN") || new URL(req.url).origin).replace(/\/+$/, "");
 
 // Response.redirect() has immutable headers, which breaks the dev server's
 // header merging ("TypeError: immutable") — build redirects manually instead.
