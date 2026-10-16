@@ -58,9 +58,9 @@ export function chineseVariant(t: string): "zh-CN" | "zh-TW" | null {
 // ---------- request-language detection (what the user wrote in; never the requested output language) ----------
 const LATIN_HINTS: [string, RegExp, RegExp?][] = [
   ["es", /\b(escribe|dame|haz|una|unos|del|los|las|cómo|qué|por favor|para|consejos|sobre|con|sin|en|el|este|esta|responde|cada|debe|lista|tabla)\b/gi, /[ñ¿¡]/],
-  ["pt", /\b(escreva|me dê|dê|faça|uma|você|não|com|sem|para|em|o|os|as|do|da|dicas|sobre|responda|retorne|apenas|cada|deve|resuma|liste|lista|tabela)\b/gi, /[ãõ]|ção\b/],
+  ["pt", /\b(escreva|me dê|dê|faça|uma|você|não|com|sem|para|em|dicas|sobre|responda|retorne|apenas|cada|deve|resuma|liste|lista|tabela)\b/gi, /[ãõ]|ção\b/],
   ["fr", /\b(écris|donne|fais|une|des|avec|sans|pour|le|la|les|du|vous|est|en|réponds|liste|renvoie|uniquement|chaque|doit|résume)\b/gi, /[èêœ]|\b(?:qu'|l'|d')/],
-  ["de", /\b(schreibe|schreib|gib|mir|eine|einen|und|mit|ohne|für|der|die|das|den|ist|bitte|nenne|erstelle|zurück|jeder|soll|über|auf)\b/gi, /[ßäöü]/],
+  ["de", /\b(schreibe|schreib|gib|mir|eine|einen|und|mit|ohne|für|der|das|den|ist|bitte|nenne|erstelle|zurück|jeder|soll|über|auf)\b/gi, /[ßäöü]/],
   ["id", /\b(tulis|berikan|buat|dan|yang|untuk|dengan|tanpa|dalam|tentang|ini|itu|kata|saya|kepada|setiap|harus|hanya|kembalikan|ringkas|tolong|jawab|daftar)\b/gi],
 ];
 export function detectLocale(text: string): string | null {
