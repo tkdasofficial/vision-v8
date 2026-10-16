@@ -1,8 +1,9 @@
 // POST /ai/:provider — AI relay. The app (wherever it is hosted) sends an OpenAI-compatible
 // chat body here; this Worker adds the provider key from its own Cloudflare secrets and
-// streams the provider response back. Authorized with the shared MAIL_TOKEN.
+// streams the provider response back. Authorized with the dedicated AI_RELAY_TOKEN (separate from the mail token).
+//   POST /ai/run  {model, input} — raw Workers AI run (image reading, speech-to-text).
 export interface AiEnv {
-  MAIL_TOKEN: string;
+  AI_RELAY_TOKEN?: string;
   NVIDIA_API_KEY?: string;
   GROQ_API_KEY?: string;
   AI?: { run: (model: string, input: unknown) => Promise<any> };
@@ -26,8 +27,14 @@ export async function handleAi(req: Request, env: AiEnv, provider: string): Prom
   if (req.method !== "POST") return json(405, "Method not allowed");
   const auth = req.headers.get("authorization") ?? "";
   const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-  if (!env.MAIL_TOKEN || !token || !safeEqual(token, env.MAIL_TOKEN)) return json(401, "unauthorized");
+  if (!env.AI_RELAY_TOKEN || !token || !safeEqual(token, env.AI_RELAY_TOKEN)) return json(401, "unauthorized");
   const body: any = await req.json().catch(() => null);
+  if (provider === "run") {
+    if (!env.AI) return json(503, "not configured");
+    if (!body || typeof body.model !== "string" || !/^@cf\//.test(body.model) || typeof body.input !== "object") return json(400, "invalid body");
+    try { return Response.json({ result: await env.AI.run(body.model, body.input) }, { headers: { "Cache-Control": "no-store" } }); }
+    catch (e: any) { const msg = String(e?.message ?? "workers ai error").slice(0, 300); return json(/429|capacity|rate|neurons/i.test(msg) ? 429 : 502, msg); }
+  }
   if (!body || typeof body.model !== "string" || !Array.isArray(body.messages)) return json(400, "invalid body");
 
   if (provider === "cf") {

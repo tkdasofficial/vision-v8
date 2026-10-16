@@ -16,7 +16,7 @@ describe("provider priority", () => {
     vi.spyOn(globalThis, "setTimeout").mockImplementation(((f: any, ms: number) => timer(f, ms < 4000 ? 0 : ms)) as any);
     limiter.reset();
     delete process.env.NVIDIA_API_KEY; delete process.env.GROQ_API_KEY;
-    captureWorkerEnv({ NVIDIA_API_KEY: "n", GROQ_API_KEY: "g" });
+    captureWorkerEnv({ NVIDIA_API_KEY: "n", GROQ_API_KEY: "g", DB: { prepare() {} } });
     process.env.CLOUDFLARE_ACCOUNT_ID = "a"; process.env.CLOUDFLARE_API_TOKEN = "c";
   });
 
@@ -54,7 +54,7 @@ describe("provider priority", () => {
   });
 
   it("missing bindings skip the provider without a network call", async () => {
-    captureWorkerEnv({});
+    captureWorkerEnv({ DB: { prepare() {} } });
     const f = vi.spyOn(globalThis, "fetch").mockResolvedValue(sse("CF"));
     await complete("s", "u", { models: TEXT_CHAIN });
     expect(f.mock.calls.map((c) => host(c[0]))).toEqual(["api.cloudflare.com"]);
