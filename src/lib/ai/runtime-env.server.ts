@@ -15,10 +15,10 @@ function workerEnv(): Bindings | undefined {
 }
 
 export function getSecret(name: string): string | undefined {
-  const v = workerEnv()?.[name];
-  if (typeof v === "string" && v) return v;
   const fromProcess = typeof process !== "undefined" ? process.env?.[name] : undefined;
-  return fromProcess || undefined;
+  if (fromProcess) return fromProcess;
+  const v = workerEnv()?.[name];
+  return typeof v === "string" && v ? v : undefined;
 }
 
 /** The Workers AI binding (env.AI), when the Worker has one. */
@@ -35,9 +35,4 @@ export function providerConfigReport() {
     workersAiBinding: !!getAiBinding(),
     workersAiRest: !!(getSecret("CLOUDFLARE_ACCOUNT_ID") && getSecret("CLOUDFLARE_API_TOKEN")),
   };
-}
-
-export function getD1Binding(): { prepare(sql: string): { bind(...params: unknown[]): { all<T>(): Promise<{ success?: boolean; results?: T[] }> } } } | undefined {
-  const db = workerEnv()?.["DB"] as any;
-  return db && typeof db.prepare === "function" ? db : undefined;
 }

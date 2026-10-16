@@ -12,9 +12,6 @@ const NO_CACHE_PAGES = /^\/(api|auth|admin|~oauth|_serverFn|google|github|verify
 
 export default defineConfig({
   tanstackStart: {
-    // Named handlers are unique; stable IDs let Vite preview call the matching
-    // Cloudflare production handler without depending on absolute checkout paths.
-    serverFns: { generateFunctionId: ({ functionName }) => functionName },
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
     server: { entry: "server" },

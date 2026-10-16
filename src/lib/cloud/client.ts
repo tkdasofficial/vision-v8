@@ -3,7 +3,6 @@
 import { runDataQuery } from "./data.functions";
 import { getCurrentUser, signInFn, signOutFn, signUpFn, updateUserFn, verifyEmailFn, resendVerificationFn, requestPasswordResetFn, verifyResetCodeFn, completePasswordResetFn, resetTicketStatusFn } from "./auth.functions";
 import type { QueryFilter, QueryResult, QuerySpec } from "./query-types";
-import { backendOAuthUrl } from "@/lib/backend";
 
 type Row = Record<string, any>;
 type ChangeEvent = { table: string; eventType: "INSERT" | "UPDATE" | "DELETE"; new: Row; old: Row };
@@ -117,9 +116,8 @@ const auth = {
     return { error: authErr(r.error ?? null) };
   },
   async signInWithOAuth({ provider }: { provider: "google" | "github" }) {
-    const url = backendOAuthUrl(provider, window.location.origin);
-    window.location.href = url;
-    return { data: { provider, url }, error: null };
+    window.location.href = `/api/oauth/${provider}`;
+    return { data: { provider, url: `/api/oauth/${provider}` }, error: null };
   },
   async signOut() { await signOutFn(); notify("SIGNED_OUT", null); return { error: null }; },
   async getSession() {

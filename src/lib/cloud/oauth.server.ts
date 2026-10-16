@@ -7,22 +7,20 @@ import { getCookie, setCookie, deleteCookie } from "@tanstack/react-start/server
 import { d1 } from "./d1.server";
 import { createUser, randomToken, startSession } from "./auth.server";
 import { oauthLinkMustResetPassword } from "../../../security";
-import type { OAuthProvider } from "./oauth-urls";
+import { providerCallbackUrl, type OAuthProvider } from "./oauth-urls";
 import { AUTH_GATEWAY_URL, gatewayStartUrl, verifyGatewayAssertion } from "./auth-gateway";
-import { getSecret } from "@/lib/ai/runtime-env.server";
-import { configuredOrigins } from "@/lib/backend-policy";
 
 export type Provider = OAuthProvider;
 const STATE_COOKIE = "vision_oauth_state";
 
-const gateway = () => (getSecret("AUTH_GATEWAY_URL") || AUTH_GATEWAY_URL).replace(/\/+$/, "");
+const gateway = () => (process.env["AUTH_GATEWAY_URL"] || AUTH_GATEWAY_URL).replace(/\/+$/, "");
 const appOrigin = (req: Request) => new URL(req.url).origin;
 
 // Response.redirect() has immutable headers, which breaks the dev server's
 // header merging ("TypeError: immutable") — build redirects manually instead.
 const redirectTo = (url: string) =>
   new Response(null, { status: 302, headers: { Location: url, "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } });
-const back = (req: Request, path: string, origin = appOrigin(req)) => redirectTo(new URL(path, origin).toString());
+const back = (req: Request, path: string) => redirectTo(new URL(path, req.url).toString());
 
 const GATEWAY_ERRORS: Record<string, string> = {
   access_denied: "Sign-in was cancelled.",
@@ -32,13 +30,9 @@ const GATEWAY_ERRORS: Record<string, string> = {
 };
 
 export async function startOAuth(req: Request, p: Provider) {
-  const returnOrigin = new URL(req.url).searchParams.get("return_to") || appOrigin(req);
-  if (returnOrigin !== appOrigin(req) && !configuredOrigins(getSecret("ALLOWED_RETURN_ORIGINS")).includes(returnOrigin)) {
-    return new Response("Return address is not allowed.", { status: 400 });
-  }
   const nonce = randomToken(24);
-  setCookie(STATE_COOKIE, `${p}:${nonce}:${encodeURIComponent(returnOrigin)}`, { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 600 });
-  return redirectTo(gatewayStartUrl(gateway(), p, `${appOrigin(req)}/api/oauth-callback/${p}`, nonce));
+  setCookie(STATE_COOKIE, `${p}:${nonce}`, { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 600 });
+  return redirectTo(gatewayStartUrl(gateway(), p, providerCallbackUrl(appOrigin(req), p), nonce));
 }
 
 export async function finishOAuth(req: Request, p: Provider) {
@@ -46,17 +40,11 @@ export async function finishOAuth(req: Request, p: Provider) {
   const saved = getCookie(STATE_COOKIE);
   deleteCookie(STATE_COOKIE, { path: "/" });
   const err = url.searchParams.get("error");
+  if (err) return back(req, "/auth/login?error=" + encodeURIComponent(GATEWAY_ERRORS[err] ?? "Sign-in failed. Please try again."));
   const assertion = url.searchParams.get("assertion");
-  const [savedP, nonce, encodedReturn] = (saved ?? "").split(":");
-  let returnOrigin = appOrigin(req);
-  try { if (encodedReturn) returnOrigin = decodeURIComponent(encodedReturn); }
-  catch { return new Response("Invalid sign-in state.", { status: 400 }); }
-  if (returnOrigin !== appOrigin(req) && !configuredOrigins(getSecret("ALLOWED_RETURN_ORIGINS")).includes(returnOrigin)) {
-    return new Response("Return address is not allowed.", { status: 400 });
-  }
-  if (err) return back(req, "/auth/login?error=" + encodeURIComponent(GATEWAY_ERRORS[err] ?? "Sign-in failed. Please try again."), returnOrigin);
+  const [savedP, nonce] = (saved ?? "").split(":");
   if (!assertion || savedP !== p || !nonce)
-    return back(req, "/auth/login?error=" + encodeURIComponent("Sign-in was cancelled or expired. Please try again."), returnOrigin);
+    return back(req, "/auth/login?error=" + encodeURIComponent("Sign-in was cancelled or expired. Please try again."));
   try {
     const claims = await verifyGatewayAssertion(assertion, { issuer: gateway(), audience: appOrigin(req), provider: p, nonce });
     // Single use: a replayed assertion is rejected.
@@ -96,17 +84,15 @@ export async function finishOAuth(req: Request, p: Provider) {
     // Provider-verified email — no code needed.
     await d1("UPDATE auth_users SET email_verified = 1 WHERE id = ?", [userId]);
     const banned = (await d1<{ is_banned: number }>("SELECT is_banned FROM profiles WHERE id = ?", [userId]))[0]?.is_banned;
-    if (banned) return back(req, "/auth/login?error=" + encodeURIComponent("This account has been suspended."), returnOrigin);
+    if (banned) return back(req, "/auth/login?error=" + encodeURIComponent("This account has been suspended."));
     if (newAccount) {
       const S = await import("./security.server");
-      if (!userId) throw new Error("Account creation failed");
-      await S.grantWelcomeCredits(userId, prof.email, S.factsFrom(req.headers, S.ensureDeviceId()));
+      await S.grantWelcomeCredits(userId!, prof.email, S.factsFrom(req.headers, S.ensureDeviceId()));
     }
-    if (!userId) throw new Error("Account creation failed");
-    await startSession(userId);
-    return back(req, "/chat", returnOrigin);
+    await startSession(userId!);
+    return back(req, "/chat");
   } catch (e) {
     console.error("[oauth]", p, (e as Error).message);
-    return back(req, "/auth/login?error=" + encodeURIComponent("Sign-in failed. Please try again."), returnOrigin);
+    return back(req, "/auth/login?error=" + encodeURIComponent("Sign-in failed. Please try again."));
   }
 }

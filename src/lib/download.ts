@@ -1,4 +1,3 @@
-import { backendFetch } from "@/lib/backend";
 // Browser download of a private server file. A plain <a href download> lets the browser's download
 // manager make the request, which (inside the embedded preview / with partitioned cookies) often goes out
 // without the session cookie → 401 → Chrome shows "Failed – Needs authorization". Fetching from the page
@@ -15,7 +14,7 @@ const FALLBACK: Record<number, string> = {
   410: "This download has expired.",
 };
 
-export async function fetchDownload(url: string, fetcher: typeof fetch = backendFetch): Promise<Blob> {
+export async function fetchDownload(url: string, fetcher: typeof fetch = fetch): Promise<Blob> {
   let res: Response;
   try { res = await fetcher(url, { credentials: "include", cache: "no-store" }); }
   catch { throw new DownloadError("Network problem — the download couldn't start. Check your connection and try again.", 0, "network"); }

@@ -46,8 +46,6 @@ function NotFoundComponent() {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  // Frontend hosting renders no session-dependent loaders or backend work.
-  ssr: false,
   head: () => ({
     meta: [
       { charSet: "utf-8" },

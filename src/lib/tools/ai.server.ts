@@ -1,7 +1,6 @@
-import { getSecret } from "@/lib/ai/runtime-env.server";
 // Cloudflare Workers AI calls used by chat tools: image reading (vision) and speech-to-text.
 const base = () => {
-  const account = getSecret("CLOUDFLARE_ACCOUNT_ID"), token = getSecret("CLOUDFLARE_API_TOKEN");
+  const account = process.env["CLOUDFLARE_ACCOUNT_ID"], token = process.env["CLOUDFLARE_API_TOKEN"];
   if (!account || !token) throw new Error("The AI service isn't configured on the server.");
   return { url: `https://api.cloudflare.com/client/v4/accounts/${account}/ai/run/`, token };
 };

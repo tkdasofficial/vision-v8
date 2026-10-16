@@ -1,6 +1,5 @@
 import type { ChatMode, OutputKind } from "@/lib/ai/modes";
 import { parseTaskEvent, type TaskEvent } from "@/lib/ai/task-events";
-import { backendFetch } from "@/lib/backend";
 
 export type ChatMeta = { executionMode: ChatMode; output: OutputKind; model?: string };
 
@@ -11,7 +10,7 @@ export async function streamChat(
   toolId?: string,
   opts: { mode?: ChatMode; onMeta?: (m: ChatMeta) => void; onStatus?: (stage: string, detail?: string) => void; onTask?: (e: TaskEvent) => void; signal?: AbortSignal; webSearch?: boolean; requestId?: string; conversationId?: string } = {},
 ): Promise<string> {
-  const resp = await backendFetch("/api/chat", {
+  const resp = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ messages, toolId, mode: opts.mode ?? "default", requestId: opts.requestId, conversationId: opts.conversationId, ...(opts.webSearch ? { webSearch: true } : {}) }),

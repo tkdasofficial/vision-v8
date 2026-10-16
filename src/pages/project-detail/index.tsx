@@ -14,7 +14,6 @@ import { projectChats } from "@/lib/recent-chats";
 import { setPendingProjectPrompt } from "@/lib/pending-project";
 import { projectHeaderName } from "@/lib/project-name";
 import { cn } from "@/lib/utils";
-import { backendFetch } from "@/lib/backend";
 
 type Source = { id: string; name: string; mime: string; kind: string; size: number; url: string; created_at: string };
 const ACCEPT = ".pdf,.txt,.md,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.json,.zip,.rtf,.odt,image/*";
@@ -44,7 +43,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
     if (!data) setMissing(true); else setProject(data as ProjectRow);
   };
   const loadSources = async () => {
-    const res = await backendFetch(`/api/files?project=${encodeURIComponent(projectId)}`, { credentials: "include" });
+    const res = await fetch(`/api/files?project=${encodeURIComponent(projectId)}`, { credentials: "include" });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) { toast.error(body.error || "Couldn't load sources."); setSources([]); return; }
     setSources(body.files || []);
@@ -60,7 +59,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
       setUploading((n) => n + 1);
       try {
         const form = new FormData(); form.append("file", file); form.append("project", projectId);
-        const res = await backendFetch("/api/files", { method: "POST", body: form, credentials: "include" });
+        const res = await fetch("/api/files", { method: "POST", body: form, credentials: "include" });
         const body = await res.json().catch(() => ({}));
         if (!res.ok) toast.error(body.error || `Couldn't upload ${file.name}.`);
         else setSources((prev) => [body.file, ...(prev || [])]);
@@ -70,7 +69,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
   };
   const removeSource = async (source: Source) => {
     if (!window.confirm(`Delete ${source.name}?`)) return;
-    const res = await backendFetch(`/api/files?id=${encodeURIComponent(source.id)}`, { method: "DELETE", credentials: "include" });
+    const res = await fetch(`/api/files?id=${encodeURIComponent(source.id)}`, { method: "DELETE", credentials: "include" });
     if (!res.ok) { toast.error("Couldn't delete the source."); return; }
     setSources((prev) => (prev || []).filter((s) => s.id !== source.id));
   };

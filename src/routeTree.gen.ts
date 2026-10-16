@@ -92,7 +92,6 @@ import { Route as VideosIndexRouteImport } from './routes/videos.index'
 import { Route as VideosVideoChatIdRouteImport } from './routes/videos.$videoChatId'
 import { Route as ApiArtifactsArtifactIdRouteImport } from './routes/api/artifacts.$artifactId'
 import { Route as ApiJobsJobIdRouteImport } from './routes/api/jobs.$jobId'
-import { Route as ApiOauthCallbackProviderRouteImport } from './routes/api/oauth-callback.$provider'
 import { Route as ApiOauthProviderRouteImport } from './routes/api/oauth.$provider'
 import { Route as AuthGithubCallbackRouteImport } from './routes/auth.github.callback'
 import { Route as AuthGoogleCallbackRouteImport } from './routes/auth.google.callback'
@@ -515,12 +514,6 @@ const ApiJobsJobIdRoute = ApiJobsJobIdRouteImport.update({
   path: '/$jobId',
   getParentRoute: () => ApiJobsRoute,
 } as any)
-const ApiOauthCallbackProviderRoute =
-  ApiOauthCallbackProviderRouteImport.update({
-    id: '/api/oauth-callback/$provider',
-    path: '/api/oauth-callback/$provider',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ApiOauthProviderRoute = ApiOauthProviderRouteImport.update({
   id: '/api/oauth/$provider',
   path: '/api/oauth/$provider',
@@ -632,7 +625,6 @@ export interface FileRoutesByFullPath {
   '/videos/': typeof VideosIndexRoute
   '/api/artifacts/$artifactId': typeof ApiArtifactsArtifactIdRoute
   '/api/jobs/$jobId': typeof ApiJobsJobIdRoute
-  '/api/oauth-callback/$provider': typeof ApiOauthCallbackProviderRoute
   '/api/oauth/$provider': typeof ApiOauthProviderRoute
   '/auth/github/callback': typeof AuthGithubCallbackRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
@@ -720,7 +712,6 @@ export interface FileRoutesByTo {
   '/videos': typeof VideosIndexRoute
   '/api/artifacts/$artifactId': typeof ApiArtifactsArtifactIdRoute
   '/api/jobs/$jobId': typeof ApiJobsJobIdRoute
-  '/api/oauth-callback/$provider': typeof ApiOauthCallbackProviderRoute
   '/api/oauth/$provider': typeof ApiOauthProviderRoute
   '/auth/github/callback': typeof AuthGithubCallbackRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
@@ -812,7 +803,6 @@ export interface FileRoutesById {
   '/videos/': typeof VideosIndexRoute
   '/api/artifacts/$artifactId': typeof ApiArtifactsArtifactIdRoute
   '/api/jobs/$jobId': typeof ApiJobsJobIdRoute
-  '/api/oauth-callback/$provider': typeof ApiOauthCallbackProviderRoute
   '/api/oauth/$provider': typeof ApiOauthProviderRoute
   '/auth/github/callback': typeof AuthGithubCallbackRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
@@ -905,7 +895,6 @@ export interface FileRouteTypes {
     | '/videos/'
     | '/api/artifacts/$artifactId'
     | '/api/jobs/$jobId'
-    | '/api/oauth-callback/$provider'
     | '/api/oauth/$provider'
     | '/auth/github/callback'
     | '/auth/google/callback'
@@ -993,7 +982,6 @@ export interface FileRouteTypes {
     | '/videos'
     | '/api/artifacts/$artifactId'
     | '/api/jobs/$jobId'
-    | '/api/oauth-callback/$provider'
     | '/api/oauth/$provider'
     | '/auth/github/callback'
     | '/auth/google/callback'
@@ -1084,7 +1072,6 @@ export interface FileRouteTypes {
     | '/videos/'
     | '/api/artifacts/$artifactId'
     | '/api/jobs/$jobId'
-    | '/api/oauth-callback/$provider'
     | '/api/oauth/$provider'
     | '/auth/github/callback'
     | '/auth/google/callback'
@@ -1136,7 +1123,6 @@ export interface RootRouteChildren {
   ProjectsIndexRoute: typeof ProjectsIndexRoute
   VideosIndexRoute: typeof VideosIndexRoute
   ApiArtifactsArtifactIdRoute: typeof ApiArtifactsArtifactIdRoute
-  ApiOauthCallbackProviderRoute: typeof ApiOauthCallbackProviderRoute
   ApiOauthProviderRoute: typeof ApiOauthProviderRoute
 }
 
@@ -1723,13 +1709,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiJobsJobIdRouteImport
       parentRoute: typeof ApiJobsRoute
     }
-    '/api/oauth-callback/$provider': {
-      id: '/api/oauth-callback/$provider'
-      path: '/api/oauth-callback/$provider'
-      fullPath: '/api/oauth-callback/$provider'
-      preLoaderRoute: typeof ApiOauthCallbackProviderRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/oauth/$provider': {
       id: '/api/oauth/$provider'
       path: '/api/oauth/$provider'
@@ -1970,7 +1949,6 @@ const rootRouteChildren: RootRouteChildren = {
   ProjectsIndexRoute: ProjectsIndexRoute,
   VideosIndexRoute: VideosIndexRoute,
   ApiArtifactsArtifactIdRoute: ApiArtifactsArtifactIdRoute,
-  ApiOauthCallbackProviderRoute: ApiOauthCallbackProviderRoute,
   ApiOauthProviderRoute: ApiOauthProviderRoute,
 }
 export const routeTree = rootRouteImport

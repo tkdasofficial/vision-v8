@@ -1,4 +1,3 @@
-import { getSecret } from "@/lib/ai/runtime-env.server";
 // Provider-agnostic web search for Research mode. Each provider fails and retries independently
 // (shared failure classification + bounded jittered retry); successful results are never discarded.
 import { classifyFailure, withRetry, type FailureKind } from "@/lib/ai/failures";
@@ -51,9 +50,9 @@ const duckduckgo: Provider = {
 
 // SearXNG: only used when the owner configures their own instance.
 const searxng: Provider = {
-  id: "searxng", available: () => !!getSecret("SEARXNG_URL"),
+  id: "searxng", available: () => !!process.env["SEARXNG_URL"],
   async search(q, f) {
-    const base = String(getSecret("SEARXNG_URL")).replace(/\/$/, "");
+    const base = String(process.env["SEARXNG_URL"]).replace(/\/$/, "");
     const j = await f(`${base}/search?format=json&q=${encodeURIComponent(q)}`, AbortSignal.timeout(SEARCH_LIMITS.perAttemptMs));
     if (!j || !Array.isArray(j.results)) throw new SearchError(502, "Malformed response");
     return j.results.slice(0, 8).map((r: any) => ({ title: String(r.title), url: String(r.url), snippet: String(r.content ?? ""), source: "Web (SearXNG)" }));

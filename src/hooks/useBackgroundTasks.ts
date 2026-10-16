@@ -1,9 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/cloud/client";
 import { useAuth } from "@/context/AuthContext";
-import { runJob } from "@/lib/builder/jobs-client";
-import type { JobView } from "@/lib/builder/statuses";
-import { isTerminal } from "@/lib/builder/statuses";
 
 export type BackgroundTask = {
   id: string;
@@ -13,11 +10,13 @@ export type BackgroundTask = {
   status: string;
   input: any;
   result: any;
-  progress: number | null;
+  progress: number;
   error: string | null;
   created_at: string;
   updated_at: string;
 };
+
+const TASK_WORKER_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/task-worker`;
 
 export function useBackgroundTasks(sessionId?: string | null) {
   const { user } = useAuth();
@@ -122,18 +121,32 @@ export function useBackgroundTasks(sessionId?: string | null) {
 
       const sid = chatSessionId || sessionId;
 
-      const toTask = (job: JobView): BackgroundTask => ({
-        id: job.id, user_id: user.id, session_id: sid ?? null, task_type: taskType,
-        input, status: job.status, result: job.result, progress: job.progress,
-        error: job.error, created_at: job.createdAt, updated_at: job.updatedAt,
-      });
-      const job = await runJob("agent_task", { input: typeof input === "string" ? input : JSON.stringify(input), sessionId: sid }, (current) => {
-        const task = toTask(current);
-        setTasks((prev) => [...prev.filter((t) => t.id !== task.id), task]);
-        setActiveTasks((prev) => isTerminal(current.status)
-          ? prev.filter((t) => t.id !== task.id) : [...prev.filter((t) => t.id !== task.id), task]);
-      });
-      return toTask(job);
+      // Insert task into DB
+      const { data: task, error } = await supabase
+        .from("background_tasks")
+        .insert({
+          user_id: user.id,
+          session_id: sid,
+          task_type: taskType,
+          input,
+          status: "pending",
+        })
+        .select()
+        .single();
+
+      if (error || !task) throw new Error(error?.message || "Failed to create task");
+
+      // Fire-and-forget: trigger the worker
+      fetch(TASK_WORKER_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ taskId: task.id }),
+      }).catch((e) => console.warn("Worker trigger failed:", e));
+
+      return task as BackgroundTask;
     },
     [user, sessionId]
   );
