@@ -7,10 +7,10 @@ const PHASE_LABELS: Record<ThinkingPhase, string> = {
   creating: "Creating",
   analyzing: "Analyzing",
   working: "Working",
-  fetching: "Fetching webpage",
-  researching: "Researching",
-  writing: "Writing",
-  optimizing: "Optimizing",
+  fetching: "Searching",
+  researching: "Searching",
+  writing: "Creating",
+  optimizing: "Working",
 };
 
 type Props = {
@@ -22,7 +22,7 @@ type Props = {
   done?: string[];
 };
 
-const TypingIndicator = forwardRef<HTMLDivElement, Props>(({ phase = "thinking", label: stageLabel, detail, done }, ref) => {
+const TypingIndicator = forwardRef<HTMLDivElement, Props>(({ phase = "thinking", label: stageLabel }, ref) => {
   const [dots, setDots] = useState(0);
 
   useEffect(() => {
@@ -36,16 +36,8 @@ const TypingIndicator = forwardRef<HTMLDivElement, Props>(({ phase = "thinking",
   const dotStr = ".".repeat(dots);
 
   return (
-    <div ref={ref} role="status" aria-live="polite" className="mx-auto flex h-16 w-full max-w-2xl flex-col justify-center gap-0.5 rounded-lg px-4 animate-fade-in">
-      <span className="flex items-center gap-2 text-sm font-medium text-foreground">
-        <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-primary" aria-hidden />
-        <span key={label} className="animate-fade-in">{label}<span className="text-muted-foreground">{dotStr}</span></span>
-      </span>
-      {(detail || (done && done.length > 0)) && (
-        <span className="truncate pl-3.5 text-xs text-muted-foreground">
-          {detail || done?.slice(-3).map((s) => s.replace(/_/g, " ")).join(" · ")}
-        </span>
-      )}
+    <div ref={ref} role="status" aria-live="polite" className="mx-auto w-full max-w-2xl animate-fade-in px-4 py-2">
+      <span key={label} className="animate-fade-in text-sm font-medium text-foreground">{label}<span className="text-muted-foreground">{dotStr}</span></span>
     </div>
   );
 });

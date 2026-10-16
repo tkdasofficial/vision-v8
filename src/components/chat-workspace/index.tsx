@@ -18,7 +18,8 @@ import ChatInput from "@/components/chat-input";
 import ChatMessage from "@/components/chat-message";
 import EmptyState from "@/components/empty-state";
 import TypingIndicator, { detectPhase, type ThinkingPhase } from "@/components/typing-indicator";
-import { applyTaskEvent, STAGE_LABELS, type TaskState } from "@/lib/ai/task-events";
+import { applyTaskEvent, type TaskState } from "@/lib/ai/task-events";
+import { workStateForStage } from "@/lib/ai/work-status";
 import { revealPlan } from "@/lib/ai/render-scheduler";
 import { getCategory } from "@/lib/file-converter";
 import { runJob, listJobs, fetchJob, cancelJob } from "@/lib/builder/jobs-client";
@@ -236,10 +237,11 @@ const ChatWorkspace = ({ tool, onMenuClick, initialMessages, chatId: externalCha
   const runInlineJob = useCallback(async (type: "project_generate" | "code_export" | "agent_task", input: Record<string, unknown>, sessionId: string | null, files?: File[]) => {
     const jobId = crypto.randomUUID();
     const msgId = `job-${jobId}`;
-    const intro = type === "project_generate" ? "Building your project. Progress, files and the ZIP download will appear here." : type === "agent_task" ? "Working on it. Each step, its results and any downloads will appear here." : "Writing your file. The download will appear here.";
+    const done = type === "project_generate" ? "Here's your project." : type === "code_export" ? "Here's your file." : "";
     trackJob(jobId, true);
     const show = (job: import("@/lib/builder/statuses").JobView) => setMessages((prev) => {
-      const content = job.status === "failed" || job.status === "timed_out" ? `That didn't work: ${job.error ?? "unknown error"}` : job.status === "cancelled" ? "Task cancelled." : intro;
+      // While running: the work-state line only — no intro sentence, no card.
+      const content = !isTerminal(job.status) ? "" : job.status === "failed" || job.status === "timed_out" ? `That didn't work: ${job.error ?? "unknown error"}` : job.status === "cancelled" ? "Task cancelled." : done;
       const msg: ChatMessageType = { id: msgId, role: "assistant", content, timestamp: new Date(), job };
       return prev.some((m) => m.id === msgId) ? prev.map((m) => (m.id === msgId ? msg : m)) : [...prev, msg];
     });
@@ -546,7 +548,7 @@ const ChatWorkspace = ({ tool, onMenuClick, initialMessages, chatId: externalCha
     const msgId = `job-${zipJobId}`;
     trackJob(zipJobId, true);
     const show = (job: import("@/lib/builder/statuses").JobView) => setMessages((prev) => {
-      const content = job.status === "failed" ? `Couldn't analyze **${file.name}**: ${job.error ?? "unknown error"}` : `Analysis of **${file.name}**`;
+      const content = job.status === "failed" ? `Couldn't analyze **${file.name}**: ${job.error ?? "unknown error"}` : isTerminal(job.status) ? `Analysis of **${file.name}**` : "";
       const msg = { id: msgId, role: "assistant" as const, content, timestamp: new Date(), job };
       return prev.some((m) => m.id === msgId) ? prev.map((m) => (m.id === msgId ? msg : m)) : [...prev, msg];
     });
@@ -654,7 +656,7 @@ const ChatWorkspace = ({ tool, onMenuClick, initialMessages, chatId: externalCha
                 isNew={newMessageIds.has(msg.id)}
               />
             ))}
-            {isTyping && !messages.some((m) => m.job && !isTerminal(m.job.status)) && <TypingIndicator phase={thinkingPhase} label={taskState ? STAGE_LABELS[taskState.stage] : undefined} detail={taskState?.message} />}
+            {isTyping && !messages.some((m) => m.job && !isTerminal(m.job.status)) && <TypingIndicator phase={thinkingPhase} label={taskState ? (workStateForStage(taskState.stage) ?? undefined) : undefined} />}
           </div>
         ) : (
           <EmptyState tool={tool} />
