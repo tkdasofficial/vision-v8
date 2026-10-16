@@ -2,7 +2,8 @@ import { allowedBackendOrigin, backendCors, configuredOrigins, isBackendPath } f
 
 type Handler = { fetch(request: Request, env: any, ctx: any): Promise<Response> | Response };
 
-/** Existing gateway endpoints stay intact; the same Worker owns app APIs. */
+/** API-only Worker: app API/RPC run here; everything else goes to the existing
+ * gateway. It never serves frontend pages or assets — any host serves those. */
 export function createCloudflareBoundary(application: Handler, gateway: Handler): Handler {
   return {
     async fetch(request, env, ctx) {
