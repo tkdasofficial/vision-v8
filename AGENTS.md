@@ -29,3 +29,4 @@
 
 - Workspace pages share fade/grid controls; Settings uses Radix switches/radios. Drafts pass URL context to addChat; ProjectChatHeader uses ProjectMenu; lists sort by creation with pins first. Why: consistent UI and isolated chats.
 - Chat replies run detached from the browser request (Worker waitUntil, never request.signal) and the server saves the finished answer into chat_messages under the client reply id with INSERT OR IGNORE; a reopened chat whose last message is an unanswered question polls for it. Why: leaving or reloading never loses an answer.
+- Off-Worker AI calls go to the "vision" Worker `/ai/:provider` relay (keys and AI binding live there), authorized by MAIL_TOKEN. Why: provider keys never leave Cloudflare.
