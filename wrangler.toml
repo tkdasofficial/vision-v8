@@ -19,6 +19,11 @@ binding = "ASSETS"
 # Used for OAuth callbacks and absolute links; must be in the gateway allowlist.
 AUTH_ORIGIN = ""
 
+# Workers AI binding — the primary path for the Cloudflare model (no API token,
+# no REST quota). providers.server.ts falls back to the REST endpoint off-Worker.
+[ai]
+binding = "AI"
+
 # VISION database — reached through this binding when deployed (no API token needed).
 [[d1_databases]]
 binding = "DB"

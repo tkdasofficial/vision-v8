@@ -8,6 +8,9 @@ export const Route = createFileRoute("/api/jobs")({
   server: {
     handlers: {
       GET: async ({ request }) => {
+        const { maybeProxyToWorker } = await import("@/lib/cloud/api-proxy.server");
+        const proxied = await maybeProxyToWorker(request);
+        if (proxied) return proxied;
         const { getCaller } = await import("@/lib/cloud/auth.server");
         const caller = await getCaller();
         if (!caller) return Response.json({ error: "Please sign in." }, { status: 401 });
@@ -17,6 +20,9 @@ export const Route = createFileRoute("/api/jobs")({
         return Response.json({ jobs: await listJobs(caller.user.id, 30, sid) }, { headers: { "Cache-Control": "no-store" } });
       },
       POST: async ({ request }) => {
+        const { maybeProxyToWorker } = await import("@/lib/cloud/api-proxy.server");
+        const proxied = await maybeProxyToWorker(request);
+        if (proxied) return proxied;
         const { getCaller } = await import("@/lib/cloud/auth.server");
         const caller = await getCaller();
         if (!caller) return Response.json({ error: "Please sign in." }, { status: 401 });
