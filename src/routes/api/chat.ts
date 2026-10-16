@@ -130,7 +130,7 @@ export const Route = createFileRoute("/api/chat")({
             const spec = buildSpec(lastText, fullHist as any);
             if (ref.kind !== "none") spec.reqs = spec.reqs.filter((r) => !(r.kind === "ambiguous" && r.value === "reference"));
             system += specPrompt(spec);
-            console.log(JSON.stringify({ tag: "[chat:req]", reqs: spec.reqs.length, explicit: spec.reqs.filter((r) => r.source === "explicit").length, inferred: spec.reqs.filter((r) => r.source === "inferred").length, conflicts: spec.reqs.filter((r) => r.kind === "conflict").map((r) => r.value), ambiguous: spec.reqs.filter((r) => r.kind === "ambiguous").map((r) => r.value), gaps: spec.gaps.length }));
+            console.log(JSON.stringify({ tag: "[chat:req]", locale: spec.requestLocale ?? null, reqs: spec.reqs.length, explicit: spec.reqs.filter((r) => r.source === "explicit").length, inferred: spec.reqs.filter((r) => r.source === "inferred").length, conflicts: spec.reqs.filter((r) => r.kind === "conflict").map((r) => r.value), ambiguous: spec.reqs.filter((r) => r.kind === "ambiguous").map((r) => r.value), gaps: spec.gaps.length }));
           }
         }
         if (budgeted.dropped) system += `\n\nNote: ${budgeted.dropped} older message(s) were left out to fit the context budget; if the user refers to them and no referenced source is attached, say you can't see them instead of guessing.`;
