@@ -33,6 +33,10 @@ export function parseTaskEvent(raw: unknown): TaskEvent | null {
 /** Applies an event in order: other tasks, duplicates, out-of-order events and anything after a terminal stage are ignored. */
 export function applyTaskEvent(state: TaskState | null, ev: TaskEvent, activeTaskId?: string): TaskState | null {
   if (activeTaskId && ev.taskId !== activeTaskId) return state;
+  if (ev.stage === "switching_provider") {
+    if (!state || state.taskId !== ev.taskId || ev.seq <= state.seq || isTerminalStage(state.stage)) return state;
+    return { ...state, seq: ev.seq };
+  }
   if (state && state.taskId === ev.taskId) {
     if (ev.seq <= state.seq || isTerminalStage(state.stage)) return state;
     const history = state.history[state.history.length - 1] === ev.stage ? state.history : [...state.history, ev.stage];

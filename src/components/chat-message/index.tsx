@@ -394,7 +394,7 @@ const DEEP_LABELS: Record<DeepStage, string> = {
   crafting: "Preparing final response", done: "Done", failed: "Couldn't finish",
   planning: "Preparing execution plan", generating: "Generating individual tasks", verifying: "Verifying results",
   correcting: "Correcting identified issues", validating: "Running final validation",
-  retrying: "Retrying", switching_provider: "Switching AI provider",
+  retrying: "Retrying", switching_provider: "Working on it",
 };
 
 const DeepStatusCard = ({ stage, seconds, since, detail }: { stage: DeepStage; seconds?: number; since: Date; detail?: string }) => {
@@ -415,7 +415,7 @@ const DeepStatusCard = ({ stage, seconds, since, detail }: { stage: DeepStage; s
         : stage === "done" ? <Check className="size-3.5 shrink-0 text-primary" />
         : <AlertCircle className="size-3.5 shrink-0 text-destructive" />}
       <span key={stage} className="min-w-0 break-words font-medium text-foreground animate-fade-in">
-        {DEEP_LABELS[stage]}{live && detail ? ` · ${detail}` : ""}{live ? "…" : stage === "done" && secs ? ` · thought for ${secs}s` : ""}
+        {DEEP_LABELS[stage]}{live && detail && stage !== "switching_provider" ? ` · ${detail}` : ""}{live ? "…" : stage === "done" && secs ? ` · thought for ${secs}s` : ""}
       </span>
       {live && secs !== undefined && <span className="ml-auto shrink-0 tabular-nums text-muted-foreground">{secs}s</span>}
     </div>
