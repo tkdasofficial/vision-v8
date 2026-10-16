@@ -54,7 +54,7 @@ export async function runAgent(job: JobRun, input: AgentInput, save: (f: WorkFil
     let lastErr = "";
     for (let a = 0; a < 2 && !plan; a++) {
       const { text } = await complete(SYSTEM(), a ? `${ask}\n\nYour previous reply was invalid (${lastErr}). Reply with valid JSON only.` : ask, { maxTokens: 2000, models: PLANNING, ...providerOpts });
-      try { plan = parsePlan(text, (id) => TOOL_MAP.has(id)); } catch (e: any) { lastErr = e.message; console.warn("[agent] plan parse failed:", e.message, JSON.stringify(text.slice(0, 400))); }
+      try { plan = parsePlan(text, (id) => TOOL_MAP.has(id)); } catch (e: any) { lastErr = e.message; console.warn("[agent]", { jobId: job.id, category: "invalid_plan" }); }
     }
     if (!plan) throw new Error("I couldn't work out which tools to use. Please rephrase the request.");
     if (!plan.steps.length) {
@@ -85,7 +85,7 @@ export async function runAgent(job: JobRun, input: AgentInput, save: (f: WorkFil
       try { out = await executeTool(tool, ctx, params); break; }
       catch (e: any) {
         error = String(e?.message ?? e).slice(0, 300);
-        if (attempt === MAX_STEP_REPAIRS || /attach|isn't available|configured|busy/i.test(error)) break;
+        if (attempt === MAX_STEP_REPAIRS || /attach|isn't available|configured|busy|All AI providers|AI request is invalid/i.test(error)) break;
         job.markCurrent("error");
         await job.step("debugging", `${tool.id} failed: ${error} — adjusting`);
         try {
