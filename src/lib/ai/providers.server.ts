@@ -119,3 +119,48 @@ async function attemptProvider(t: ModelRef, messages: unknown[], opts: { maxToke
     signal.removeEventListener("abort", onAbort);
   }
 }
+
+/**
+ * Cloudflare provider via the Workers AI binding (env.AI.run). Returns null when no
+ * binding exists (off-Worker hosting), so the caller falls back to the REST endpoint.
+ * With stream:true the binding returns an OpenAI-compatible SSE ReadableStream.
+ */
+async function attemptWorkersAiBinding(t: ModelRef, messages: unknown[], opts: { maxTokens: number; deadlineAt?: number }, signal: AbortSignal): Promise<ProviderResult | null> {
+  const { getAiBinding } = await import("./runtime-env.server");
+  const ai = getAiBinding();
+  if (!ai) return null;
+  if (signal.aborted) return { ok: false, status: 499, reason: "cancelled" };
+  if (opts.deadlineAt && Date.now() >= opts.deadlineAt) return { ok: false, status: 504, reason: "request deadline reached" };
+  const { limiter } = await import("./rate-limiter");
+  if (!limiter.available(t.provider)) return { ok: false, status: 429, reason: "provider cooling down" };
+  let release: () => void;
+  try { release = await limiter.acquire(t.provider, undefined, signal); } catch { return { ok: false, status: signal.aborted ? 499 : 429, reason: "rate limit queue full" }; }
+  const t0 = Date.now();
+  try {
+    const stream = await ai.run(t.model, { messages, max_tokens: opts.maxTokens, stream: true });
+    if (!stream || typeof (stream as any).getReader !== "function") {
+      release();
+      console.log(JSON.stringify({ tag: "[ai:fail]", provider: t.provider, model: t.model, status: 502, category: "outage", ms: Date.now() - t0, via: "binding" }));
+      return { ok: false, status: 502, reason: "workers ai binding returned no stream" };
+    }
+    const reader = (stream as ReadableStream<Uint8Array>).getReader();
+    let ended = false;
+    const cleanup = () => { if (ended) return; ended = true; release(); signal.removeEventListener("abort", abortStream); };
+    const abortStream = () => { void reader.cancel().catch(() => {}); cleanup(); };
+    signal.addEventListener("abort", abortStream, { once: true });
+    const body = new ReadableStream<Uint8Array>({
+      async pull(controller) {
+        try { const chunk = await reader.read(); if (chunk.done) { cleanup(); controller.close(); } else controller.enqueue(chunk.value); }
+        catch (error) { cleanup(); controller.error(error); }
+      },
+      async cancel(reason) { cleanup(); await reader.cancel(reason); },
+    });
+    console.log(JSON.stringify({ tag: "[ai:call]", provider: t.provider, model: t.model, status: 200, kind: "ok", ms: Date.now() - t0, via: "binding" }));
+    return { ok: true, body };
+  } catch (e: any) {
+    release();
+    const status = signal.aborted ? 499 : 502;
+    console.log(JSON.stringify({ tag: "[ai:fail]", provider: t.provider, model: t.model, status, category: status === 499 ? "cancelled" : "outage", ms: Date.now() - t0, via: "binding" }));
+    return { ok: false, status, reason: String(e?.message ?? "workers ai error").slice(0, 300) };
+  }
+}
