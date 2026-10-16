@@ -12,6 +12,7 @@
 - `src/AGENTS.md` and `src/lib/AGENTS.md` hold scoped rules; read them before changing files there.
 - Chat attachment Plugins uses a controlled shared Popover anchored to the whole composer and selects through its existing plugin-chip callback. Why: keeps the picker above the input without navigating away or duplicating send logic.
 - Credentials live only in Cloudflare Secrets/Variables or its Secrets Store and are read at runtime, never in Lovable secrets. Why: Cloudflare is the credential source of truth.
+- GitHub CLI (`gh`) is used only for runtime setup tasks sourced from `tkdasofficial/vision-runtime` (runtime provisioning, its `.github` workflows, `runtime/` and `tests/` material); never for app source, code edits, or day-to-day changes. Why: keeps the app codebase (from `tkdasofficial/vision-v7`) separate from runtime provisioning.
 
 - Page UIs live in `src/pages/<page>/index.tsx` (Admin stays in `src/views/admin/`), reusable UI in `src/components/<name>/index.tsx` (shadcn `ui/` keeps its flat files); route files only wrap a page. Old URLs are mapped once in `src/lib/legacy-routes.ts` and redirected by thin legacy route files; OAuth callbacks, `/auth/verify` and APIs are never redirected. Page access is decided in `src/lib/route-access.ts` and enforced once by `RouteGuard` in `__root.tsx`; a failed session check means retry, never signed out. Why: one rule set, no flashes or false logouts.
 - Navigate via `@/lib/router-compat`, never react-router-dom. Why: preserves simple calls over TanStack Router.
