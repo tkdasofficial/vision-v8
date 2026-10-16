@@ -9,7 +9,8 @@ ALLOWED_RETURN_ORIGINS = "https://id-preview--b9303adb-64e8-4985-a8e5-43de9ac3bb
 
 # Secrets (set with `wrangler secret put`, never committed):
 # GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET,
-# STATE_KEY, SIGNING_KEY, NVIDIA_API_KEY, GROQ_API_KEY, AI_RELAY_TOKEN (AI relay, separate from MAIL_TOKEN)
+# STATE_KEY, SIGNING_KEY, NVIDIA_API_KEY, GROQ_API_KEY
+# The /ai relay authorizes callers by their Origin header against ALLOWED_RETURN_ORIGINS (no shared token).
 # Deploy only with: cd auth-gateway && npx wrangler deploy -c wrangler.toml (root .wrangler redirect points elsewhere)
 
 # Gmail SMTP credentials from the account Secrets Store (used by POST /mail).
