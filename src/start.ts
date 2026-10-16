@@ -2,7 +2,7 @@ import { createStart, createCsrfMiddleware, createMiddleware } from "@tanstack/r
 
 import { renderErrorPage } from "./lib/error-page";
 import { backendFetch } from "./lib/backend";
-import { allowedBackendOrigin, configuredOrigins, isBackendPath } from "./lib/backend-policy";
+import { allowedBackendOrigin, configuredOrigins, isBackendPath, isAppCallbackPath } from "./lib/backend-policy";
 import { getSecret } from "./lib/ai/runtime-env.server";
 
 const backendTransport = createMiddleware({ type: "function" }).client(({ next }) =>
@@ -11,7 +11,7 @@ const backendTransport = createMiddleware({ type: "function" }).client(({ next }
 
 // Fail closed: a frontend host must never execute an API handler with local credentials.
 const backendBoundary = createMiddleware().server(({ request, pathname, handlerType, next }) => {
-  if ((handlerType === "serverFn" || isBackendPath(pathname)) && getSecret("VISION_BACKEND_RUNTIME") !== "cloudflare") {
+  if ((handlerType === "serverFn" || isBackendPath(pathname) || isAppCallbackPath(pathname)) && getSecret("VISION_BACKEND_RUNTIME") !== "cloudflare") {
     return Response.json({ error: "Use the configured Cloudflare API endpoint." }, { status: 503 });
   }
   return next();

@@ -6,7 +6,13 @@ export function configuredOrigins(value: string | undefined): string[] {
 }
 
 export function isBackendPath(path: string): boolean {
-  return /^\/(api(?:\/|$)|_serverFn(?:\/|$))/.test(path) || false;
+  return /^\/(api(?:\/|$)|_serverFn(?:\/|$))/.test(path);
+}
+
+// These old app callbacks must not execute on a frontend host. The gateway
+// deliberately keeps ownership of its provider callback on the Cloudflare host.
+export function isAppCallbackPath(path: string): boolean {
+  return /^\/(?:auth\/)?(?:google|github)\/callback$/.test(path);
 }
 
 export function allowedBackendOrigin(origin: string | null, requestUrl: string, allowed: string[]): boolean {
