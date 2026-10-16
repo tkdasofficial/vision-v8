@@ -45,9 +45,10 @@ describe("multilingual file export", () => {
       expect(pdfLostChars(f.bytes)).toBe(0);
       const p = `/tmp/ml-${id}.pdf`; writeFileSync(p, f.bytes);
       const text = execFileSync("pdftotext", [p, "-"]).toString();
-      // Arabic-script text is extracted from presentation forms / visual order, so compare only LTR scripts exactly.
-      if (id !== "ar" && id !== "ur") { expect(squash(text)).toContain(squash(s.text)); expect(squash(text)).toContain(squash(s.title)); }
-      else expect((text.match(/[\u0600-\u06ff\ufb50-\ufeff]/g) ?? []).length).toBeGreaterThan(20);
+      // Arabic-script text is extracted in visual order and Indic text in glyph (reordered-matra) order, so only
+      // Latin/Cyrillic/CJK are compared exactly; the others are checked by codepoint volume and by rendering.
+      if (!["ar", "ur", "hi", "bn", "ta"].includes(id)) { expect(squash(text)).toContain(squash(s.text)); expect(squash(text)).toContain(squash(s.title)); }
+      else expect((text.match(/[\u0600-\u06ff\ufb50-\ufeff\u0900-\u097f\u0980-\u09ff\u0b80-\u0bff]/g) ?? []).length).toBeGreaterThan(20);
     }, 60000);
   }
   it.skipIf(!hasPdftotext)("mixed RTL/LTR + multi-script PDF draws every character", async () => {
