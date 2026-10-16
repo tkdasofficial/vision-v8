@@ -11,6 +11,7 @@ import { downloadFile } from "@/lib/download";
 import { toast } from "sonner";
 import TaskStatus from "@/components/task-status";
 import { visibleJobStatus } from "@/lib/status-visibility";
+import { workStateForJob } from "@/lib/ai/work-status";
 
 /** Downloads through an authenticated fetch so the session always reaches the server. */
 function ArtifactButton({ id, name, size }: { id: string; name: string; size?: string }) {
@@ -37,13 +38,6 @@ const CleanText = ({ text }: { text: string }) => looksLikeCode(text)
 const TITLES = { code_export: "Code file", project_generate: "Project", zip_analyze: "ZIP analysis", agent_task: "Task", runtime_task: "Background task" } as const;
 const fmt = (n: number) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : n > 1024 ? `${(n / 1024).toFixed(1)} KB` : `${n} B`);
 
-/** User-facing stage names for chat tasks, mapped from real backend statuses (never simulated). */
-const AGENT_STAGE: Partial<Record<JobView["status"], string>> = {
-  queued: "Queued", thinking: "Thinking", planning: "Planning", processing: "Working",
-  writing_content: "Writing", creating_document: "Creating your file", converting_file: "Converting your file",
-  validating_output: "Validating", saving_file: "Saving", retrying: "Retrying", debugging: "Fixing an issue",
-  completed: "Delivered", completed_with_warnings: "Delivered", failed: "Failed", timed_out: "Timed Out", cancelled: "Cancelled",
-};
 
 function StatusIcon({ status }: { status: JobView["status"] }) {
   if (status === "completed") return <CheckCircle2 className="h-4 w-4 text-primary" />;
@@ -75,8 +69,8 @@ export default function JobCard({ job: given, onRetry, compact }: { job: JobView
   const [cancelling, setCancelling] = useState(false);
   const running = !isTerminal(job.status);
   const visible = visibleJobStatus(job);
-  const stageLabel = job.type === "agent_task" ? (AGENT_STAGE[visible.status] ?? JOB_STATUSES[visible.status]) : JOB_STATUSES[visible.status];
-  const statusLine = <TaskStatus label={stageLabel} detail={visible.detail} startedAt={job.createdAt} endedAt={running ? undefined : job.updatedAt} failed={["failed", "timed_out", "cancelled"].includes(job.status)} />;
+  const stageLabel = workStateForJob(visible.status) ?? JOB_STATUSES[visible.status];
+  const statusLine = <TaskStatus label={stageLabel} startedAt={job.createdAt} endedAt={running ? undefined : job.updatedAt} failed={job.status === "failed" || job.status === "timed_out"} cancelled={job.status === "cancelled"} />;
   const r = job.result ?? {};
   // Finished code shows only the clean code canvas — no title, badge, icons or menu.
   if (job.type === "code_export" && r.content && (job.status === "completed" || job.status === "completed_with_warnings")) {
@@ -87,17 +81,14 @@ export default function JobCard({ job: given, onRetry, compact }: { job: JobView
     const last = r.steps?.length ? r.steps[r.steps.length - 1] : null;
     return (
       <div className="space-y-3">
-        {statusLine}
         {r.steps?.map((s: any, i: number) => s.preview?.kind === "svg" && <img key={i} src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(s.preview.content)}`} alt="" className="max-h-96 w-full rounded-xl border border-border bg-background object-contain" />)}
         {job.artifacts.length > 0 && <div className="flex flex-wrap gap-2">{job.artifacts.map((a) => <ArtifactButton key={a.id} id={a.id} name={a.name} />)}</div>}
         <CleanText text={last ? (last.preview?.kind === "markdown" ? last.preview.content : last.text ?? "") : r.answer} />
       </div>
     );
   }
-  // While working: a quiet thinking pulse instead of status words.
-  if (job.type === "agent_task" && running) {
-    return statusLine;
-  }
+  // While working: the work-state line only — no card, no icons.
+  if (running) return statusLine;
   return (
     <div className="rounded-2xl border border-border bg-card p-4 text-card-foreground">
       <div className="flex items-start gap-3">
