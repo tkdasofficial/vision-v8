@@ -1,3 +1,4 @@
+import { getSecret } from "@/lib/ai/runtime-env.server";
 // GitHub Actions calls for the fixed Vision-Runtime repo. The PAT is read server-side only and never returned or logged.
 import type { RuntimeOpId } from "./operations";
 
@@ -7,7 +8,7 @@ const WORKFLOW = "run-job.yml";
 export class GithubError extends Error { constructor(msg: string, public status: number) { super(msg); } }
 
 async function gh(path: string, init: RequestInit = {}, tries = 3): Promise<Response> {
-  const token = process.env["GITHUB_PAT"];
+  const token = getSecret("GITHUB_PAT");
   if (!token) throw new GithubError("Background runtime is not configured (GitHub access key missing in Cloudflare).", 503);
   let last: Response | null = null;
   for (let i = 0; i < tries; i++) {

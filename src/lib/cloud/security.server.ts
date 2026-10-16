@@ -1,3 +1,5 @@
+import { getSecret } from "@/lib/ai/runtime-env.server";
+import { configuredOrigins } from "@/lib/backend-policy";
 // Server-only wiring of the root security/ system to D1 and the current request.
 import { getCookie, setCookie, getRequest } from "@tanstack/react-start/server";
 import { d1 } from "./d1.server";
@@ -10,9 +12,9 @@ export const DEVICE_COOKIE = "vision_did";
 
 /** Keyed hashing so stored identifiers are pseudonymous. */
 async function hashKey(): Promise<string> {
-  const explicit = process.env["SECURITY_HASH_KEY"];
+  const explicit = getSecret("SECURITY_HASH_KEY");
   if (explicit) return explicit;
-  const token = process.env["CLOUDFLARE_API_TOKEN"];
+  const token = getSecret("CLOUDFLARE_API_TOKEN");
   if (!token) throw new Error("Security is not configured");
   return sha256Hex(`vision-security:${token}`);
 }
@@ -106,7 +108,8 @@ export async function keysFor(facts: RequestFacts, email: string): Promise<Signu
 
 /** Rejects cross-site state-changing requests. */
 export function assertSameOrigin(facts: RequestFacts) {
-  const extra = [process.env["AUTH_ORIGIN"] ?? ""].filter(Boolean);
+  const extra = [...configuredOrigins(getSecret("ALLOWED_RETURN_ORIGINS")), ...configuredOrigins(getSecret("AUTH_ORIGIN"))];
+  if (facts.origin && extra.includes(facts.origin)) return;
   if (!isSameOriginRequest(facts, extra)) throw new Error("Request blocked. Please reload the page and try again.");
 }
 
