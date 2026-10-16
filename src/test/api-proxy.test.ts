@@ -90,3 +90,54 @@ describe("api-proxy", () => {
     }
   });
 });
+
+describe("workers ai binding path", () => {
+  afterEach(() => {
+    (globalThis as any)[ENV_KEY] = undefined;
+  });
+
+  it("uses the AI binding for the Cloudflare provider when present (no REST call)", async () => {
+    const encoder = new TextEncoder();
+    captureWorkerEnv({
+      AI: {
+        run: async (model: string, input: any) => {
+          expect(model).toBe("@cf/openai/gpt-oss-120b");
+          expect(input.stream).toBe(true);
+          return new ReadableStream<Uint8Array>({
+            start(c) {
+              c.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"hi"}}]}\n\n'));
+              c.enqueue(encoder.encode("data: [DONE]\n\n"));
+              c.close();
+            },
+          });
+        },
+      },
+    });
+    let restCalled = false;
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async () => { restCalled = true; throw new Error("REST must not be called"); }) as any;
+    try {
+      const { streamFromProvider } = await import("@/lib/ai/providers.server");
+      const { MODELS } = await import("@/lib/ai/models.server");
+      const result = await streamFromProvider(MODELS.cf120b, [{ role: "user", content: "hello" }], { maxTokens: 16, deep: false }, new AbortController().signal);
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const text = await new Response(result.body).text();
+        expect(text).toContain('"hi"');
+      }
+      expect(restCalled).toBe(false);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
+  it("falls back to REST when no binding exists", async () => {
+    delete process.env.CLOUDFLARE_ACCOUNT_ID;
+    delete process.env.CLOUDFLARE_API_TOKEN;
+    const { streamFromProvider } = await import("@/lib/ai/providers.server");
+    const { MODELS } = await import("@/lib/ai/models.server");
+    const result = await streamFromProvider(MODELS.cf120b, [{ role: "user", content: "hello" }], { maxTokens: 16, deep: false }, new AbortController().signal);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toMatch(/not configured/);
+  });
+});
