@@ -1,7 +1,7 @@
 // Requirement-understanding benchmark: baseline (pre-upgrade code) vs the structured spec, same cases + scoring.
 // Run with REQ_BENCH_REPORT=1 to print the full per-case report.
 import { describe, it, expect } from "vitest";
-import { DEV, HOLDOUT, type BenchCase } from "./fixtures/requirement-benchmark";
+import { DEV, HOLDOUT, HOLDOUT2, type BenchCase } from "./fixtures/requirement-benchmark";
 import { scoreCase, summarize } from "@/lib/ai/requirement-score";
 import { baselineAtoms } from "@/lib/ai/requirement-baseline";
 
@@ -24,11 +24,12 @@ describe("requirement-understanding benchmark", () => {
   it("has at least 50 dev cases plus a held-out set", () => {
     expect(DEV.length).toBeGreaterThanOrEqual(50);
     expect(new Set([...DEV, ...HOLDOUT].map((c) => c.id)).size).toBe(DEV.length + HOLDOUT.length);
+    expect(new Set([...DEV, ...HOLDOUT, ...HOLDOUT2].map((c) => c.id)).size).toBe(DEV.length + HOLDOUT.length + HOLDOUT2.length);
   });
-  it("baseline report", () => { report("BASELINE dev", run(DEV, baselineAtoms)); report("BASELINE holdout", run(HOLDOUT, baselineAtoms)); });
+  it("baseline report", () => { report("BASELINE dev", run(DEV, baselineAtoms)); report("BASELINE holdout", run(HOLDOUT, baselineAtoms)); report("BASELINE holdout2", run(HOLDOUT2, baselineAtoms)); });
   it("upgraded spec beats the baseline on both sets with no new critical omissions", () => {
     expect(specAtoms).toBeTruthy();
-    for (const [name, set] of [["dev", DEV], ["holdout", HOLDOUT]] as const) {
+    for (const [name, set] of [["dev", DEV], ["holdout", HOLDOUT], ["holdout2", HOLDOUT2]] as const) {
       const b = report(`BASELINE ${name}`, run(set, baselineAtoms)), s = report(`SPEC ${name}`, run(set, specAtoms!));
       expect(s.f1).toBeGreaterThan(b.f1);
       expect(s.critOmission).toBeLessThanOrEqual(b.critOmission);

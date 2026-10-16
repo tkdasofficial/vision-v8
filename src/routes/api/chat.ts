@@ -123,6 +123,15 @@ export const Route = createFileRoute("/api/chat")({
           const wc = workingContext(fullHist as any);
           if (wc.instructions.length) system += `\n\nActive instructions from earlier in this chat (latest correction wins):\n${wc.instructions.map((s) => `- ${s}`).join("\n")}`;
           if (budgeted.dropped && wc.summary) system += `\n\n${wc.summary}`;
+          // Requirement Understanding Engine: deterministic structured spec + coverage gaps, added before generation.
+          // Reference ambiguity is already handled above, so it is not asked twice.
+          if (!lastHasMedia && lastText.trim()) {
+            const { buildSpec, specPrompt } = await import("@/lib/ai/requirement-spec");
+            const spec = buildSpec(lastText, fullHist as any);
+            if (ref.kind !== "none") spec.reqs = spec.reqs.filter((r) => !(r.kind === "ambiguous" && r.value === "reference"));
+            system += specPrompt(spec);
+            console.log(JSON.stringify({ tag: "[chat:req]", reqs: spec.reqs.length, explicit: spec.reqs.filter((r) => r.source === "explicit").length, inferred: spec.reqs.filter((r) => r.source === "inferred").length, conflicts: spec.reqs.filter((r) => r.kind === "conflict").map((r) => r.value), ambiguous: spec.reqs.filter((r) => r.kind === "ambiguous").map((r) => r.value), gaps: spec.gaps.length }));
+          }
         }
         if (budgeted.dropped) system += `\n\nNote: ${budgeted.dropped} older message(s) were left out to fit the context budget; if the user refers to them and no referenced source is attached, say you can't see them instead of guessing.`;
         const fullMessages = [{ role: "system", content: system }, ...messages];
