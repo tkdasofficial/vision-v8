@@ -2,10 +2,20 @@
 // Priority is NVIDIA → Groq → Cloudflare Workers AI (see TEXT_CHAIN). Keys come from process.env or the
 // Cloudflare Worker env bindings (NVIDIA_API_KEY, GROQ_API_KEY), read by getSecret.
 import type { ModelRef } from "./models.server";
-import { getSecret } from "./runtime-env.server";
+import { getSecret, getAiBinding, getD1Binding } from "./runtime-env.server";
+import { AUTH_GATEWAY_URL } from "@/lib/cloud/auth-gateway";
 import type { ProviderEvent } from "./orchestrator.server";
 
 export function endpoint(t: ModelRef): { url: string; key?: string } {
+  // Off the Cloudflare Worker (no bindings), every AI call goes through the Cloudflare
+  // "vision" Worker's /ai relay, which holds the provider keys. MAIL_TOKEN authorizes it.
+  if (!getAiBinding() && !getD1Binding()) {
+    const token = getSecret("MAIL_TOKEN");
+    if (token) {
+      const gw = (getSecret("AUTH_GATEWAY_URL") || AUTH_GATEWAY_URL).replace(/\/+$/, "");
+      return { url: `${gw}/ai/${t.provider}`, key: token };
+    }
+  }
   if (t.provider === "groq") return { url: "https://api.groq.com/openai/v1/chat/completions", key: getSecret("GROQ_API_KEY") };
   if (t.provider === "nvidia") return { url: "https://integrate.api.nvidia.com/v1/chat/completions", key: getSecret("NVIDIA_API_KEY") };
   const account = getSecret("CLOUDFLARE_ACCOUNT_ID");
