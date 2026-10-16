@@ -13,7 +13,7 @@ export function endpoint(t: ModelRef): { url: string; key?: string; origin?: str
   // allowlist, so the app sends its public origin (AUTH_ORIGIN).
   if (!getAiBinding() && !getD1Binding()) {
     const gw = (getSecret("AUTH_GATEWAY_URL") || AUTH_GATEWAY_URL).replace(/\/+$/, "");
-    const origin = (getSecret("AUTH_ORIGIN") || "").replace(/\/+$/, "");
+    const origin = (getSecret("AUTH_ORIGIN") || "").replace(/\/+$/, "") || undefined;
     if (!origin) console.error(JSON.stringify({ tag: "[ai:relay]", error: "AUTH_ORIGIN is not set; AI calls cannot reach the Cloudflare Worker" }));
     return { url: `${gw}/ai/${t.provider}`, origin };
   }
