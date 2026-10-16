@@ -91,7 +91,7 @@ export const HOLDOUT2: BenchCase[] = [
   { id: "x01", cat: "simple", text: "Give me 4 reasons to learn Rust.", expect: ["count:4:reason"] },
   { id: "x02", cat: "format", text: "Output the list of users as CSV only.", expect: ["format:csv", "no-commentary"] },
   { id: "x03", cat: "multi", text: "Write 6 taglines for a coffee shop, each under 10 words, in a humorous tone.", expect: ["count:6:tagline", "words:-10:item", "tone:humorous"] },
-  { id: "x04", cat: "business", text: "Draft a professional email to a client about the delayed shipment. Don't mention the warehouse fire.", expect: ["deliverable:email", "tone:professional", "exclude:the warehouse fire"] },
+  { id: "x04", cat: "business", text: "Draft a professional email to a client about the delayed shipment. Don't mention the warehouse fire.", expect: ["deliverable:email", "tone:professional", "exclude:warehouse fire"] },
   { id: "x05", cat: "hinglish", text: "Hindi mein 3 sawal likho about cricket.", expect: ["count:3:question", "lang:hindi"] },
   { id: "x06", cat: "multilingual", text: "Écris une courte histoire pour les enfants avec un dragon.", expect: ["lang:french~"] },
   { id: "x07", cat: "typos", text: "writ 5 promts for a sci-fi flim", expect: ["count:5:prompt"] },
