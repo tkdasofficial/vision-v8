@@ -105,7 +105,8 @@ const ALIASES: Alias[] = [
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 // Frame per writing system: a preposition before (Latin/Cyrillic/Chinese/Arabic) or a case suffix after.
 const FRAMES: Record<string, (a: string) => RegExp> = {
-  latin: (a) => new RegExp(`(?:^|[\\s(])(?:en|em|in|auf|ins|nach|dalam|bahasa|al|ao|para|à|a|vers|sur|para o|para el|to|into)\\s+(?:(?:el|la|le|l'|o|idioma|língua|langue|lengua|sprache|bahasa)\\s+)?${esc(a)}\\w*`, "giu"),
+  // English "in X" is handled by the English rules; these frames cover the other Latin-script languages.
+  latin: (a) => new RegExp(`(?:^|[\\s(])(?:en|em|auf|ins|nach|dalam|bahasa|al|ao|para|à|vers)\\s+(?:(?:el|la|le|l'|o|idioma|língua|langue|lengua|sprache|bahasa)\\s+)?${esc(a)}(?![\\p{L}])`, "giu"),
   cyr: (a) => new RegExp(`(?:(?:на|по|в)\\s+(?:\\S+\\s+)?${esc(a)}|${esc(a)}(?=\\s|[.,:;!?]|$))`, "giu"),
   zh: (a) => new RegExp(`(?:用|以|翻译成|翻譯成|翻成|译成|譯成|改成|换成|換成|写成|寫成)\\s*${esc(a)}`, "gu"),
   ja: (a) => new RegExp(`${esc(a)}(?:で|に|に翻訳|へ)`, "gu"),
@@ -116,7 +117,7 @@ const FRAMES: Record<string, (a: string) => RegExp> = {
   bn: (a) => new RegExp(`${esc(a)}(?:তে|য়|ে|\\s*ভাষায়)`, "gu"),
   ta: (a) => new RegExp(`${esc(a)}(?:த்தில்|யில்|ில்|வில்|\\s*மொழியில்)`, "gu"),
 };
-const COMPILED = ALIASES.flatMap((al) => (Object.keys(FRAMES) as (keyof typeof FRAMES)[]).flatMap((sys) => ((al as any)[sys] as string[] | undefined ?? []).map((a) => ({ key: al.key, re: FRAMES[sys](sys === "ta" ? a.replace(/்$/, "") : a) }))));
+const COMPILED = ALIASES.flatMap((al) => (Object.keys(FRAMES) as (keyof typeof FRAMES)[]).flatMap((sys) => ((al as any)[sys] as string[] | undefined ?? []).map((a) => { const n = a.normalize("NFC"); return { key: al.key, re: FRAMES[sys](sys === "ta" ? n.replace(/்$/, "") : n) }; })));
 
 /** Output languages the user explicitly asked for, in any of the supported languages. Most specific wins per position. */
 export function explicitLanguages(text: string): { key: string; evidence: string; index: number }[] {
