@@ -62,6 +62,7 @@ describe("multilingual file export", () => {
   });
   it("a font that can't be loaded degrades to '?' with a count instead of failing", async () => {
     const { markdownToPdf } = await import("@/lib/tools/registry.server");
+    (await import("@/lib/i18n/pdf-text.server")).resetFontCache();
     const bytes = await markdownToPdf("x", "# 테스트\n\n가나다", (async () => new Response("", { status: 503 })) as any);
     expect(pdfLostChars(bytes)).toBe(6);
   });

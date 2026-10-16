@@ -27,6 +27,8 @@ export function loadFont(url: string, fetcher: typeof fetch = fetch): Promise<Ui
   }
   return p;
 }
+/** Test hook: forget cached fonts (and cached failures). */
+export function resetFontCache() { bytesCache.clear(); parsedCache.clear(); }
 const parsed = (url: string, bytes: Uint8Array) => { let f = parsedCache.get(url); if (!f) { f = fontkit.create(bytes as any); parsedCache.set(url, f); } return f; };
 
 const RTL_CHAR = /[\u0590-\u08ff\ufb1d-\ufdff\ufe70-\ufefc]/;
