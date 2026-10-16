@@ -34,7 +34,7 @@ describe("multilingual file export", () => {
       const c = await buildDocument("csv", s.title, md); keep(`${id}.csv`, c.bytes);
       const csv = strFromU8(c.bytes);
       expect(csv).toContain(s.cell);
-      if (/[^\x00-\x7f]/.test(s.cell)) expect(csv.charCodeAt(0)).toBe(0xfeff);
+      if (/[^\x00-\x7f]/.test(s.cell)) expect([...c.bytes.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]); // TextDecoder hides the BOM
       const x = await buildDocument("xlsx", s.title, md); keep(`${id}.xlsx`, x.bytes);
       const sheets = readXlsx(x.bytes);
       expect(sheets[0].rows.flat()).toContain(s.cell);
