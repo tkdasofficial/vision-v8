@@ -87,6 +87,11 @@ describe("Worker security and gateway preservation", () => {
     expect(await createCloudflareBoundary(app, gateway).fetch(new Request(`https://backend.test${path}`), env, {})).toBe(response);
     expect(app.fetch).not.toHaveBeenCalled();
   });
+  it.each(["/", "/chat", "/auth/login", "/assets/index.js", "/favicon.ico"]) ("never serves frontend %s from the Worker", async (path) => {
+    const app = { fetch: vi.fn() }; const gateway = { fetch: vi.fn().mockResolvedValue(new Response("Not found", { status: 404 })) };
+    await createCloudflareBoundary(app, gateway).fetch(new Request(`https://backend.test${path}`), env, {});
+    expect(app.fetch).not.toHaveBeenCalled();
+  });
   it("reuses DB binding without a Cloudflare REST token or network call", async () => {
     const all = vi.fn().mockResolvedValue({ success: true, results: [{ id: "existing" }] });
     const bind = vi.fn().mockReturnValue({ all }); const prepare = vi.fn().mockReturnValue({ bind });

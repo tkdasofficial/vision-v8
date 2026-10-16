@@ -1,4 +1,5 @@
 # Roadmap
+- [x] Clarify and lock API-only Cloudflare boundary: frontend pages/assets remain on any supporting host; routing regression tests 24/24 passed.
 - [x] Audit/refactor backend transports to existing Cloudflare: REST + native RPC, exact CORS/CSRF, binding reuse, preview APIs fail closed; 1214 tests passed, 1 skipped, typecheck/build/Worker bundle OK; isolated workerd session RPC 200, files 401, preflight 204.
 - [ ] Enable and verify the changed handlers on the existing live vision Worker — blocked on owner updating that Worker with the matching app bundle/config; current live preflight returns 405 with no CORS. Live sign-in/AI/Drive and Hindi PDF success remain unverified.
 - [x] Audit and centralize sequential NVIDIA → Groq → Cloudflare text fallback; fix queue/stream capacity leaks, Hindi PDF routing and truthful file stages; 1193 tests passed, 1 skipped, automatic build/typecheck OK; signed-in failure flow and 64px desktop/mobile status checked.

@@ -8,6 +8,8 @@ Browser REST callers: `cloud/chat-stream.ts`, `builder/jobs-client.ts`, `downloa
 
 ## Implemented path
 
+Split: **frontend hosting = any static host** (Cloudflare Pages, Vercel, Netlify, …); **Cloudflare Worker = API calls only**. The Worker never serves pages or assets. Set `VITE_CLOUDFLARE_API_URL` at frontend build time and add the frontend origin to `ALLOWED_RETURN_ORIGINS`.
+
 Frontend → configured Cloudflare endpoint → `cloudflare.entry.ts` → existing application API/RPC handlers → existing provider integrations. Gateway OAuth/mail/runtime handlers remain on the same Worker. Root SSR is disabled and frontend-host API execution returns 503 rather than running with preview credentials. D1 prefers the existing `DB` binding; HTTP access remains a server-side compatibility fallback. No database schema or integration is replaced.
 
 `VITE_CLOUDFLARE_API_URL` is a **public** HTTPS endpoint, defaulting to `https://vision.tusharkantidasofficial.workers.dev`. The existing Worker `ALLOWED_RETURN_ORIGINS` lists exact frontend origins for CORS, CSRF and OAuth returns, including the Worker itself for the app-side `/api/oauth-callback/:provider` return. Never put service credentials in `VITE_*` variables. Native RPC now uses stable handler names across checkout paths; dev IDs are normalized without changing serialization. The Worker still needs the corresponding version of every callable function.
