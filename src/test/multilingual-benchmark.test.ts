@@ -1,8 +1,10 @@
 // Multilingual requirement-understanding benchmark: frozen pre-multilingual engine vs current engine, per locale.
-// ML_HOLDOUT is never used for tuning. Run with REQ_BENCH_REPORT=1 to print per-locale tables.
+// ML_HOLDOUT was measured once before any fix (first-run: exact 88.1%, F1 95.3%, critical omission 8.5%);
+// later fixes were driven only by ML_DEV failures. ML_HOLDOUT2 was written after that and is never tuned against. Run with REQ_BENCH_REPORT=1 to print per-locale tables.
 import { describe, it, expect } from "vitest";
 import { ML_HOLDOUT } from "./fixtures/multilingual-holdout";
 import { ML_DEV } from "./fixtures/multilingual-dev";
+import { ML_HOLDOUT2 } from "./fixtures/multilingual-holdout2";
 import { scoreCase, summarize } from "@/lib/ai/requirement-score";
 import { specAtoms as preAtoms } from "./fixtures/spec-pre-multilingual";
 import { specAtoms } from "@/lib/ai/requirement-spec";
@@ -30,15 +32,17 @@ describe("multilingual requirement benchmark", () => {
   it("covers all 16 locale configurations with ≥10 holdout cases each, ids unique and disjoint from dev", () => {
     expect(LOCALES.length).toBe(16);
     for (const l of LOCALES) expect(ML_HOLDOUT.filter((c) => c.locale === l.id).length).toBeGreaterThanOrEqual(10);
-    const ids = [...ML_HOLDOUT, ...ML_DEV].map((c) => c.id);
+    const ids = [...ML_HOLDOUT, ...ML_HOLDOUT2, ...ML_DEV].map((c) => c.id);
     expect(new Set(ids).size).toBe(ids.length);
     const texts = new Set(ML_DEV.map((c) => c.text));
     expect(ML_HOLDOUT.some((c) => texts.has(c.text))).toBe(false);
   });
-  it("reports dev and holdout", () => { print("DEV", ML_DEV); print("HOLDOUT", ML_HOLDOUT); });
+  it("reports dev and holdout", () => { print("DEV", ML_DEV); print("HOLDOUT", ML_HOLDOUT); print("HOLDOUT2", ML_HOLDOUT2); });
   it("current engine beats the frozen pre-multilingual engine on the holdout, with fewer critical omissions", () => {
-    const a = summarize(score(ML_HOLDOUT, preAtoms)), b = summarize(score(ML_HOLDOUT, specAtoms));
-    expect(b.f1).toBeGreaterThan(a.f1);
-    expect(b.critOmission).toBeLessThan(a.critOmission);
+    for (const set of [ML_HOLDOUT, ML_HOLDOUT2]) {
+      const a = summarize(score(set, preAtoms)), b = summarize(score(set, specAtoms));
+      expect(b.f1).toBeGreaterThan(a.f1);
+      expect(b.critOmission).toBeLessThan(a.critOmission);
+    }
   });
 });
