@@ -49,11 +49,14 @@ function isH3SwallowedErrorBody(body: string): boolean {
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
-      const bindings = env && typeof env === "object" ? env as Record<string, unknown> : {};
+      // Nitro forwards a single augmented Request, not the raw Worker env args.
+      const runtime = (request as Request & { runtime?: { cloudflare?: { env?: unknown } } }).runtime;
+      const actualEnv = runtime?.cloudflare?.env ?? env;
+      const bindings = actualEnv && typeof actualEnv === "object" ? actualEnv as Record<string, unknown> : {};
       if (isBackendPath(new URL(request.url).pathname) && bindings.VISION_BACKEND_RUNTIME !== "cloudflare") {
         return Response.json({ error: "Use the configured Cloudflare API endpoint." }, { status: 503 });
       }
-      captureWorkerEnv(env);
+      captureWorkerEnv(actualEnv);
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);
