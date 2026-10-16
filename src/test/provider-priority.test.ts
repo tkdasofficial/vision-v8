@@ -54,7 +54,7 @@ describe("provider priority", () => {
   });
 
   it("missing bindings skip the provider without a network call", async () => {
-    captureWorkerEnv({});
+    captureWorkerEnv({ DB: { prepare() {} } });
     const f = vi.spyOn(globalThis, "fetch").mockResolvedValue(sse("CF"));
     await complete("s", "u", { models: TEXT_CHAIN });
     expect(f.mock.calls.map((c) => host(c[0]))).toEqual(["api.cloudflare.com"]);
